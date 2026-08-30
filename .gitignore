@@ -1,0 +1,38 @@
+﻿# Visual Studio / C#
+.vs/
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+
+# Java
+target/
+*.class
+.mtj.tmp/
+*.jar
+*.war
+*.ear
+*.nar
+.idea/
+.classpath
+.project
+.settings/
+
+# Node
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+venv/
+env/
+.env
+
+# Misc
+.DS_Store
+Thumbs.db
