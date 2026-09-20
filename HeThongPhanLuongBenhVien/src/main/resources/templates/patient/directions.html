@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Chỉ dẫn đường đi')}"></head>
+<body class="min-h-screen bg-medical-bg flex flex-col">
+
+    <div th:replace="~{fragments/navbar-patient :: navbar}"></div>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-extrabold text-slate-800">📍 Tra cứu chỉ dẫn đường đi</h1>
+            <p class="text-sm text-slate-500 mt-1">Chọn Khoa / Phòng bạn cần tìm để xem hướng dẫn chi tiết</p>
+        </div>
+
+        <!-- Search / Filter -->
+        <div class="max-w-xl mx-auto mb-8">
+            <div class="relative">
+                <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="searchDept" placeholder="Tìm kiếm khoa / phòng..." oninput="filterDepts()"
+                       class="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm">
+            </div>
+        </div>
+
+        <!-- Department Cards Grid -->
+        <div id="deptGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div th:each="dept : ${departments}" class="dept-card card-hover bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden cursor-pointer"
+                 th:data-name="${dept.name}">
+                <div class="p-5">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl flex items-center justify-center">
+                                <i data-lucide="building-2" class="w-6 h-6 text-primary"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800" th:text="${dept.name}">Khoa Tim Mạch</h3>
+                                <p class="text-xs text-slate-400" th:text="${dept.description}">Khám bệnh lý tim mạch</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location Info -->
+                    <div class="bg-slate-50 rounded-xl p-3 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="building" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-xs text-slate-600" th:text="${dept.building} + ' — Tầng ' + ${dept.floor}">Tòa B — Tầng 3</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="door-open" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-xs text-slate-600" th:text="'Phòng ' + ${dept.roomNumbers}">Phòng 301-308</span>
+                        </div>
+                    </div>
+
+                    <!-- Directions -->
+                    <div th:if="${dept.locationGuide}" class="mt-3 bg-blue-50 rounded-xl p-3">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="navigation" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
+                            <p class="text-xs text-slate-700 leading-relaxed" th:text="${dept.locationGuide}">Từ sảnh chính Tòa A...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <script>
+        lucide.createIcons();
+
+        function filterDepts() {
+            const q = document.getElementById('searchDept').value.toLowerCase();
+            document.querySelectorAll('.dept-card').forEach(card => {
+                const name = card.dataset.name.toLowerCase();
+                card.style.display = name.includes(q) ? '' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>

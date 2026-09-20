@@ -53,8 +53,8 @@ footer: 'Hệ thống Trợ lý ảo tiếp đón và phân luồng'
 - **Tên đề tài:** Hệ thống Trợ lý ảo hỗ trợ tiếp đón và phân luồng bệnh nhân ứng dụng AI.
 - **Quy mô:** Nhóm 2 thành viên.
 - **Phân công vai trò:**
-  - **Thành viên 1:** AI/ML Engineer (Huấn luyện PhoBERT, YOLOv8) & Data Engineer (Thu thập, làm sạch dữ liệu).
-  - **Thành viên 2:** Developer (Xây dựng Web App, Backend Chat Real-time WebSocket) & System Integration.
+  - **Thành viên 1 (Backend):** Spring Boot 4.1.1 — Auth JWT, Queue, Billing BHYT, Chỉ dẫn đường đi.
+  - **Thành viên 2 (AI/ML):** Python FastAPI — Fine-tune PhoBERT, YOLOv8 OCR thẻ BHYT, Chatbot, Data Pipeline.
 
 ---
 
@@ -85,11 +85,14 @@ footer: 'Hệ thống Trợ lý ảo tiếp đón và phân luồng'
 
 # 🗂️ 7. Tìm kiếm & Thu thập Dataset
 
-- **1. Dữ liệu văn bản (FAQ & Triệu chứng - Khoa):**
-  - *Công khai:* Tìm kiếm các dataset y tế tiếng Việt trên Huggingface, Kaggle.
-  - *Tự thu thập:* Dùng Web Scraping lấy dữ liệu hỏi đáp từ website các bệnh viện lớn (Medlatec, Vinmec).
+- **1. Dữ liệu văn bản (Triệu chứng - Khoa):**
+  - *Phương pháp Lai (Hybrid):* Kết hợp dữ liệu tự sinh (Synthetic ~18.000 mẫu) và dữ liệu cào thực tế từ các trang tư vấn sức khỏe (Vinmec, HelloBacsi).
+  - *Tự động gán nhãn:* Dùng Gemini API (LLM) phân loại Khoa, Intent, Severity cho dữ liệu cào được.
+  - *Kết quả:* `train_dataset_hybrid.csv` (~17.998 mẫu cân bằng).
 - **2. Dữ liệu hình ảnh (Thẻ BHYT):**
-  - Do tính bảo mật, nhóm sẽ tự tạo tập dữ liệu giả lập (synthetic data) thẻ mẫu hoặc dùng ảnh của người thân/tình nguyện viên để huấn luyện YOLOv8.
+  - Do tính bảo mật, nhóm sẽ tự tạo tập dữ liệu giả lập (synthetic data) thẻ mẫu hoặc dùng ảnh của người thân/tình nguyện viên.
+- **3. Dữ liệu kiểm thử (Seed Data):**
+  - Cài sẵn các tài khoản bệnh nhân với nhiều mức BHYT khác nhau vào CSDL trước buổi báo cáo để thầy cô test trực tiếp.
 
 ---
 

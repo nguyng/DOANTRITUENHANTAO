@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Dashboard Admin')}"></head>
+<body class="min-h-screen bg-medical-bg">
+    <div th:replace="~{fragments/sidebar-admin :: sidebar}"></div>
+
+    <main class="ml-64 p-8">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-800">📊 Dashboard Tổng quan</h1>
+                <p class="text-sm text-slate-500 mt-1">Thống kê hoạt động bệnh viện hôm nay</p>
+            </div>
+            <p class="text-sm text-slate-400" id="adminTime"></p>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider">Bệnh nhân hôm nay</p>
+                        <p class="text-3xl font-extrabold text-slate-800 mt-1" th:text="${stats.totalPatients}">47</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
+                        <i data-lucide="users" class="w-6 h-6 text-blue-500"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider">Nhân viên trực</p>
+                        <p class="text-3xl font-extrabold text-emerald-600 mt-1" th:text="${stats.activeStaff}">23</p>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
+                        <i data-lucide="user-check" class="w-6 h-6 text-emerald-500"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider">Khoa đang hoạt động</p>
+                        <p class="text-3xl font-extrabold text-primary mt-1" th:text="${stats.activeDepts}">11</p>
+                    </div>
+                    <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                        <i data-lucide="building-2" class="w-6 h-6 text-primary"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider">Chat AI hôm nay</p>
+                        <p class="text-3xl font-extrabold text-purple-600 mt-1" th:text="${stats.totalChats}">128</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center">
+                        <i data-lucide="bot" class="w-6 h-6 text-purple-500"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts placeholder -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl border border-slate-100 p-6">
+                <h3 class="font-bold text-slate-800 mb-4">Phân bổ bệnh nhân theo Khoa</h3>
+                <canvas id="deptChart" height="250"></canvas>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-6">
+                <h3 class="font-bold text-slate-800 mb-4">Lượng khám theo ngày (7 ngày gần nhất)</h3>
+                <canvas id="dailyChart" height="250"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // Clock
+        function updateClock() {
+            document.getElementById('adminTime').textContent = new Date().toLocaleString('vi-VN');
+        }
+        updateClock(); setInterval(updateClock, 1000);
+
+        // Sample charts (sẽ thay bằng dữ liệu thật từ Thymeleaf)
+        new Chart(document.getElementById('deptChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Cấp Cứu', 'Tim Mạch', 'Nhi', 'Tai Mũi Họng', 'Tiêu Hoá', 'Khác'],
+                datasets: [{ data: [12, 8, 10, 6, 5, 6], backgroundColor: ['#EF4444','#0077B6','#F59E0B','#10B981','#8B5CF6','#CBD5E1'] }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } } } }
+        });
+
+        new Chart(document.getElementById('dailyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['T2','T3','T4','T5','T6','T7','CN'],
+                datasets: [{ label: 'Bệnh nhân', data: [35,42,38,47,50,30,12], backgroundColor: '#0077B6', borderRadius: 8 }]
+            },
+            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        });
+    </script>
+</body>
+</html>

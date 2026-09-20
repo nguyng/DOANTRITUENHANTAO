@@ -14,16 +14,16 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 │                        CLIENT LAYER (Tier 1)                         │
 │  ┌─────────────────┐  ┌────────────────┐  ┌──────────────────────┐  │
 │  │  Bệnh nhân Web  │  │ Dashboard Y tá │  │ Màn hình Hành lang   │  │
-│  │  (React.js)     │  │ (React.js)     │  │ (Public Display)     │  │
+│  │  (Trình duyệt)  │  │ (Trình duyệt)  │  │ (Public Display)     │  │
 │  └────────┬────────┘  └───────┬────────┘  └──────────┬───────────┘  │
 └───────────┼───────────────────┼──────────────────────┼──────────────┘
             │ REST/WebSocket    │ REST/WebSocket        │ WebSocket
 ┌───────────▼───────────────────▼──────────────────────▼──────────────┐
 │                      APPLICATION LAYER (Tier 2)                      │
-│                    Spring Boot Backend (Java 17)                      │
+│                    Spring Boot Backend (Java 21)                      │
 │  ┌─────────────┐  ┌───────────────┐  ┌────────────┐  ┌──────────┐  │
-│  │ Auth Module │  │  Chat Module  │  │Queue Module│  │ Notif.   │  │
-│  │  (JWT/OAuth)│  │  (WebSocket)  │  │  (Redis)   │  │ Module   │  │
+│  │ View Layer  │  │  Chat Module  │  │Queue Module│  │ Notif.   │  │
+│  │ (Thymeleaf) │  │  (WebSocket)  │  │  (Redis)   │  │ Module   │  │
 │  └─────────────┘  └──────┬────────┘  └────────────┘  └──────────┘  │
 │                           │ HTTP gRPC                                │
 │                    ┌──────▼────────┐                                 │
@@ -55,8 +55,8 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 
 | Tầng | Công nghệ | Lý do lựa chọn |
 |------|-----------|----------------|
-| **Frontend** | React.js + TypeScript + Tailwind | Component-based, dễ quản lý state phức tạp |
-| **Backend** | Spring Boot 3.x (Java 17) | Robust, hỗ trợ WebSocket tốt, phân quyền dễ |
+| **Frontend** | Thymeleaf + HTML/CSS/JS + Tailwind | Render trực tiếp từ Spring Boot, dễ tích hợp, phù hợp 2 người |
+| **Backend** | Spring Boot **4.1.1** (Java **21**) | Robust, hỗ trợ WebSocket tốt, phân quyền dễ |
 | **AI Service** | FastAPI (Python 3.10+) | Native với thư viện ML (PyTorch, HuggingFace) |
 | **Database** | PostgreSQL 15 | ACID, JSON support, tốt cho dữ liệu quan hệ |
 | **Cache & Queue** | Redis 7 | Lưu session, quản lý hàng đợi STT |
@@ -69,8 +69,8 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 
 ## 2. THIẾT KẾ CƠ SỞ DỮ LIỆU (Database Design)
 
-> [!IMPORTANT]
-> **Thay đổi thiết kế:** Hệ thống KHÔNG có chức năng tự đăng ký. Admin (bệnh viện) là người **cấp tài khoản** cho bệnh nhân dựa trên **Mã BHYT do hệ thống sinh ra**, tương tự mô hình nhà nước cấp CCCD. Bệnh nhân chỉ thực hiện **đăng nhập**.
+> [!NOTE]
+> **Về tài khoản bệnh nhân:** Hệ thống KHÔNG xây dựng chức năng Admin tạo tài khoản bệnh nhân thông qua UI. Thay vào đó, nhóm sẽ **cài sẵn dữ liệu mẫu (Seed Data)** — gồm các tài khoản bệnh nhân với nhiều mức BHYT khác nhau — vào cơ sở dữ liệu trước khi báo cáo. Thầy cô có thể dùng trực tiếp các tài khoản này để test hệ thống.
 
 ### 2.1. ERD — Entity Relationship Diagram (Đã cập nhật)
 
@@ -81,29 +81,30 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 │ PK  id (UUID)            │───────<│ PK  id (UUID)      │>──────│ PK  id (UUID)    │
 │     bhyt_number  [UNIQUE]│        │ FK  patient_id     │       │     name         │
 │  ★  (Mã BHYT hệ thống   │        │ FK  department_id  │       │     code         │
-│      cấp, dùng đăng nhập)│        │ FK  doctor_id      │       │     description  │
+│      cấp, dùng đăng nhập)│        │ FK  doctor_id      │       │     building     │
 │     password_hash        │        │     visit_name     │       │     floor        │
 │     full_name            │        │  ★ (VD: Khám tổng  │       │     room_numbers │
-│     phone                │        │      quát, Khám    │       │     is_active    │
-│     email                │        │      ngoại trú)    │       │     created_at   │
+│     phone                │        │      quát, Khám    │       │     location_guide│
+│     email                │        │      ngoại trú)    │       │     is_active    │
 │     dob                  │        │     diagnosis      │       └──────────────────┘
 │     gender               │        │     visit_date     │
 │     address              │        │     status         │       ┌──────────────────┐
 │     role                 │        │     severity_level │       │   QUEUE_TICKETS  │
 │   (PATIENT/NURSE/        │        │     original_cost  │       ├──────────────────┤
 │    DOCTOR/ADMIN)         │        │  ★ (Giá gốc trước │       │ PK  id (UUID)    │
-│     avatar_url           │        │      khi trừ BH)   │       │ FK  patient_id   │
-│                          │        │     insurance_paid │       │ FK  department_id│
-│  === Thông tin BHYT ===  │        │  ★ (BH trả bao    │       │     ticket_number│
-│  ★  bhyt_discount_rate  │        │      nhiêu)        │       │     status       │
+│ FK  department_id        │        │      khi trừ BH)   │       │ FK  patient_id   │
+│  ★  (Bắt buộc với        │        │     insurance_paid │       │ FK  department_id│
+│      Bác sĩ / Y tá)      │        │  ★ (BH trả bao    │       │     ticket_number│
+│     avatar_url           │        │      nhiêu)        │       │     status       │
 │  ★  (Mức % giảm của BH  │        │     final_cost     │       │ (WAITING/CALLED/ │
 │      VD: 80%, 95%, 100%) │        │  ★ (Số tiền BN    │       │  DONE/CANCELLED) │
-│  ★  bhyt_expiry_date    │        │      thực trả)     │       │     called_at    │
-│  ★  (Hạn sử dụng thẻ BH)│        │     notes          │       │     done_at      │
-│     is_active            │        │     created_at     │       │     created_at   │
-│     created_by (FK Admin)│        └────────┬───────────┘       └──────────────────┘
-│     created_at           │                 │
-└──────────────────────────┘                 │ 1:N
+│  ★  bhyt_expiry_date    │        │      thực trả)     │       │  ★ severity      │
+│  ★  (Hạn sử dụng thẻ BH)│        │     notes          │       │  (NORMAL/MEDIUM/ │
+│     is_active            │        │     created_at     │       │   EMERGENCY)     │
+│     created_by (FK Admin)│        │ FK  ticket_id      │       │     called_at    │
+│     created_at           │        │  ★ (STT gốc)      │       │     done_at      │
+│                          │        └────────┬───────────┘       │     created_at   │
+└──────────────────────────┘                 │                   └──────────────────┘
          │                          ┌────────▼───────────┐
          │                          │   PRESCRIPTIONS    │  ← Bảng thuốc chi tiết
          │                          ├────────────────────┤
@@ -137,7 +138,8 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
                         │ PK  id (UUID)    │       │ PK  id (UUID)        │
                         │ FK  session_id   │       │ FK  message_id       │
                         │     sender_role  │       │     ai_model_used    │
-                        │   (USER/BOT)     │       │     input_text       │
+                        │   (USER/BOT/     │       │     input_text       │
+                        │    SYSTEM)       │       │     predicted_dept   │
                         │     content      │       │     predicted_dept   │
                         │     message_type │       │     confidence_score │
                         │  (TEXT/IMAGE)    │       │     sentiment        │
@@ -155,13 +157,22 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 - `bhyt_discount_rate`: Mức % bảo hiểm chi trả (VD: `0.80` = 80%, `0.95` = 95%). Admin nhập khi tạo tài khoản.
 - `bhyt_expiry_date`: Ngày hết hạn thẻ BHYT. Hệ thống cảnh báo khi sắp hết hạn.
 - `created_by`: FK trỏ về Admin đã tạo tài khoản này.
+- `department_id`: FK trỏ đến bảng `DEPARTMENTS`. Bắt buộc đối với role là `DOCTOR` hoặc `NURSE` để biết họ trực thuộc Khoa nào.
 
 **Bảng `VISIT_RECORDS`** *(Đổi tên từ MEDICAL_RECORDS, cập nhật)*: Mỗi bản ghi là một lần khám bệnh. Các trường quan trọng:
+- `ticket_id`: FK trỏ về `QUEUE_TICKETS`. Liên kết bệnh án với số thứ tự ban đầu và chẩn đoán AI.
 - `visit_name`: Tên lần khám.
 - `original_cost`: Giá gốc tổng cộng.
 - `insurance_paid`: Số tiền bảo hiểm đã chi trả (dựa trên chi tiết từng dịch vụ/thuốc).
 - `final_cost`: Số tiền bệnh nhân **thực trả**.
 - `diagnosis`: Chẩn đoán bệnh.
+
+**Bảng `DEPARTMENTS`** *(Cập nhật)*: Danh sách các Khoa/Phòng trong bệnh viện. Hỗ trợ tính năng Chỉ dẫn đường đi (Cấp độ 1).
+- `building`: Tòa nhà hoặc Khu vực (VD: "Tòa nhà A", "Khu B").
+- `floor`: Tầng mấy (VD: 3).
+- `room_numbers`: Số phòng (VD: "301-305").
+- `location_guide`: Câu văn chỉ dẫn đường đi chi tiết từ cổng/sảnh chính (VD: *"Từ sảnh chính đi thang máy A lên tầng 3, rẽ phải"*).
+> **Ghi chú:** Dữ liệu Khoa/Phòng và Chỉ dẫn được cài sẵn bằng **Seed Data** từ đầu, không có chức năng Admin chỉnh sửa qua UI.
 
 **Bảng `MEDICAL_SERVICES`** *(Mới)*: Danh mục dịch vụ y tế, xét nghiệm (Tên, Giá, `is_bhyt_covered`, `bhyt_price_limit`).
 
@@ -172,8 +183,14 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 **Bảng `PRESCRIPTIONS`** *(Cập nhật)*: Chi tiết thuốc bệnh nhân được kê, liên kết với bảng `MEDICINES`. Ghi rõ `bhyt_pay` và `patient_co_pay`.
 
 **Bảng `QUEUE_TICKETS`**: Trái tim của module phân luồng. Số `ticket_number` tự tăng, reset về 1 mỗi ngày.
+- `severity`: Mức độ khẩn cấp **do AI dự đoán ban đầu** (`NORMAL` / `MEDIUM` / `EMERGENCY`). Dùng để Y tá ưu tiên gọi số bệnh nhân khẩn cấp lên trước.
 
 **Bảng `AI_ANALYSIS_LOGS`**: Ghi lại kết quả dự đoán của AI và kết quả thực tế (y tá có sửa hay không). Phục vụ báo cáo độ chính xác AI.
+
+**Bảng `CHAT_MESSAGES`**: Cột `sender_role` gồm 3 giá trị:
+- `USER`: Tin bệnh nhân gửi.
+- `BOT`: Phản hồi từ AI (PhoBERT / FAQ model).
+- `SYSTEM`: Thông báo tự động của hệ thống (VD: "Phiếu khám số 12 của bạn đã được tạo!", "Đến lượt bạn rồi!").
 
 ---
 
@@ -189,13 +206,14 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 | `POST` | `/api/v1/auth/logout` | Thu hồi token | JWT |
 | `POST` | `/api/v1/auth/change-password` | Bệnh nhân đổi mật khẩu lần đầu đăng nhập | JWT/PATIENT |
 
-#### 👤 Patient Account APIs (Admin quản lý)
+#### 👤 Patient Account APIs
 | Method | Endpoint | Mô tả | Auth |
 |--------|----------|-------|------|
-| `POST` | `/api/v1/admin/patients` | **Admin tạo tài khoản** bệnh nhân mới, hệ thống sinh Mã BHYT | ADMIN |
+| `GET` | `/api/v1/admin/patients` | Danh sách toàn bộ bệnh nhân | ADMIN/NURSE |
 | `PUT` | `/api/v1/admin/patients/{id}` | Cập nhật thông tin, mức giảm BH, hạn sử dụng | ADMIN |
 | `PUT` | `/api/v1/admin/patients/{id}/deactivate` | Khóa tài khoản bệnh nhân | ADMIN |
-| `GET` | `/api/v1/admin/patients` | Danh sách toàn bộ bệnh nhân | ADMIN/NURSE |
+
+> **Ghi chú:** Tài khoản bệnh nhân được **cài sẵn bằng Seed Data** vào CSDL trước khi báo cáo. Không có UI Admin để tạo tài khoản bệnh nhân mới trong phạm vi đồ án này.
 
 #### 👤 Patient Profile APIs (Bệnh nhân tự xem)
 | Method | Endpoint | Mô tả | Auth |
@@ -227,6 +245,12 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 | `GET` | `/api/v1/queue/{deptId}` | Xem hàng đợi của khoa | NURSE |
 | `PUT` | `/api/v1/queue/{ticketId}/call` | Gọi số tiếp theo | NURSE |
 | `PUT` | `/api/v1/queue/{ticketId}/transfer` | Chuyển khoa | NURSE |
+
+#### 🏥 Departments & Directions APIs
+| Method | Endpoint | Mô tả | Auth |
+|--------|----------|-------|------|
+| `GET` | `/api/v1/departments` | Lấy danh sách các khoa phòng đang mở | Public |
+| `GET` | `/api/v1/departments/{id}/directions` | Lấy thông tin **Chỉ dẫn đường đi** (Tòa nhà, Tầng, Phòng, `location_guide`) | Public |
 
 #### 🤖 AI Gateway APIs (proxy đến AI Service)
 | Method | Endpoint | Mô tả | Auth |
@@ -637,7 +661,7 @@ services:
   backend:      # Spring Boot app (port 8080)
   nlp-service:  # FastAPI NLP (port 8001)
   cv-service:   # FastAPI CV (port 8002)
-  frontend:     # React.js (port 3000)
+  # frontend removed, using Thymeleaf SSR in Spring Boot
   nginx:        # Reverse proxy (port 80/443)
 ```
 
@@ -645,7 +669,7 @@ services:
 
 ```
 medassist/
-├── frontend/               # React.js App
+├── HeThongPhanLuongBenhVien/  # Spring Boot + Thymeleaf
 │   ├── src/
 │   │   ├── pages/          # Các trang chính
 │   │   ├── components/     # Component dùng chung
@@ -786,4 +810,5 @@ ALTER TABLE users ADD COLUMN bhyt_discount_rate DECIMAL(3,2) -- Mức hưởng: 
 ALTER TABLE users ADD COLUMN bhyt_expiry_date   DATE         -- Hạn sử dụng thẻ
 ALTER TABLE users ADD COLUMN bhyt_issued_date   DATE         -- Ngày cấp thẻ
 ALTER TABLE users ADD COLUMN created_by         UUID         -- Admin đã tạo tài khoản này
+ALTER TABLE users ADD COLUMN department_id      UUID         -- Khoa trực thuộc (đối với Bác sĩ/Y tá)
 ```

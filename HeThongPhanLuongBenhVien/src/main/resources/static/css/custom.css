@@ -1,0 +1,114 @@
+/* ===== MedAssist AI — Custom Styles ===== */
+
+/* Google Font Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --primary: #0077B6;
+    --primary-dark: #023E8A;
+    --primary-light: #00B4D8;
+    --accent: #48CAE4;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --bg: #F0F9FF;
+    --surface: #FFFFFF;
+    --text: #1E293B;
+    --text-light: #64748B;
+    --border: #E2E8F0;
+}
+
+* {
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+/* === Scrollbar đẹp === */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* === Chat Bubbles === */
+.chat-bubble-bot {
+    background: linear-gradient(135deg, #E0F2FE, #F0F9FF);
+    border: 1px solid #BAE6FD;
+    border-radius: 0 16px 16px 16px;
+}
+.chat-bubble-user {
+    background: linear-gradient(135deg, #0077B6, #023E8A);
+    color: white;
+    border-radius: 16px 0 16px 16px;
+}
+.chat-bubble-system {
+    background: #FEF9C3;
+    border: 1px solid #FDE68A;
+    border-radius: 12px;
+    text-align: center;
+}
+
+/* === Severity Badges === */
+.badge-normal { background: #D1FAE5; color: #065F46; }
+.badge-medium { background: #FEF3C7; color: #92400E; }
+.badge-emergency { background: #FEE2E2; color: #991B1B; }
+
+/* === Status Badges === */
+.status-waiting { background: #DBEAFE; color: #1E40AF; }
+.status-called { background: #FEF3C7; color: #92400E; }
+.status-done { background: #D1FAE5; color: #065F46; }
+.status-cancelled { background: #F1F5F9; color: #64748B; }
+
+/* === Card hover effect === */
+.card-hover {
+    transition: all 0.3s ease;
+}
+.card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 119, 182, 0.15);
+}
+
+/* === Sidebar Active Link === */
+.sidebar-link {
+    transition: all 0.2s ease;
+    border-radius: 12px;
+    padding: 10px 16px;
+}
+.sidebar-link:hover {
+    background: rgba(0, 119, 182, 0.08);
+    color: var(--primary);
+}
+.sidebar-link.active {
+    background: linear-gradient(135deg, #0077B6, #023E8A);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+}
+
+/* === Pulse animation cho STT đang gọi === */
+@keyframes pulse-call {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 119, 182, 0.4); }
+    50% { box-shadow: 0 0 0 12px rgba(0, 119, 182, 0); }
+}
+.pulse-call {
+    animation: pulse-call 2s infinite;
+}
+
+/* === Gradient text === */
+.gradient-text {
+    background: linear-gradient(135deg, #0077B6, #00B4D8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* === Queue Display (Màn hình hành lang) === */
+.display-number {
+    font-size: 8rem;
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, #0077B6, #023E8A);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Lịch sử khám')}"></head>
+<body class="min-h-screen bg-medical-bg flex flex-col">
+    <div th:replace="~{fragments/navbar-patient :: navbar}"></div>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-8">
+        <h1 class="text-2xl font-extrabold text-slate-800 mb-6">🏥 Lịch sử khám bệnh</h1>
+
+        <!-- Empty state -->
+        <div th:if="${#lists.isEmpty(visits)}" class="text-center py-20">
+            <div class="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="file-x" class="w-10 h-10 text-slate-300"></i>
+            </div>
+            <p class="text-sm text-slate-500">Bạn chưa có lần khám nào trong hệ thống.</p>
+        </div>
+
+        <!-- Visits list -->
+        <div class="space-y-3" th:unless="${#lists.isEmpty(visits)}">
+            <a th:each="visit : ${visits}" th:href="@{/visits/{id}(id=${visit.id})}"
+               class="block bg-white rounded-2xl border border-slate-100 p-5 card-hover">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-11 h-11 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl flex items-center justify-center">
+                            <i data-lucide="clipboard-list" class="w-5 h-5 text-primary"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm" th:text="${visit.visitName}">Khám tổng quát</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                <span th:text="${visit.departmentName}">Khoa Nội</span> ·
+                                <span th:text="${#temporals.format(visit.visitDate, 'dd/MM/yyyy')}">20/09/2026</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right flex items-center gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-primary" th:text="${#numbers.formatDecimal(visit.finalCost, 0, 'COMMA', 0, 'POINT')} + 'đ'">150,000đ</p>
+                            <span class="text-xs px-2 py-0.5 rounded-full"
+                                  th:classappend="${visit.status == 'COMPLETED'} ? 'status-done' : 'status-waiting'"
+                                  th:text="${visit.status == 'COMPLETED'} ? 'Hoàn tất' : 'Đang khám'">Hoàn tất</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

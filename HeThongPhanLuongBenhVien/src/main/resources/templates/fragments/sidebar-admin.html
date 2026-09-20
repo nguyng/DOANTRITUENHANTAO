@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Sidebar cho Admin -->
+<aside th:fragment="sidebar" class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-40">
+
+    <!-- Logo -->
+    <div class="p-5 border-b border-slate-100">
+        <a href="/admin/dashboard" class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <span class="text-lg font-bold gradient-text">MedAssist</span>
+                <span class="text-xs text-orange-400 block -mt-1">Quản trị viên</span>
+            </div>
+        </a>
+    </div>
+
+    <!-- Menu -->
+    <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">Tổng quan</p>
+        <a href="/admin/dashboard" class="sidebar-link flex items-center gap-3"
+           th:classappend="${currentPage == 'dashboard'} ? 'active' : 'text-slate-600'">
+            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+            <span class="text-sm font-medium">Dashboard</span>
+        </a>
+
+        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2 mt-6">Quản lý</p>
+        <a href="/admin/staff" class="sidebar-link flex items-center gap-3"
+           th:classappend="${currentPage == 'staff'} ? 'active' : 'text-slate-600'">
+            <i data-lucide="users" class="w-5 h-5"></i>
+            <span class="text-sm font-medium">Nhân viên</span>
+        </a>
+        <a href="/admin/faq" class="sidebar-link flex items-center gap-3"
+           th:classappend="${currentPage == 'faq'} ? 'active' : 'text-slate-600'">
+            <i data-lucide="help-circle" class="w-5 h-5"></i>
+            <span class="text-sm font-medium">Cấu hình FAQ</span>
+        </a>
+
+        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2 mt-6">Hệ thống</p>
+        <a href="/admin/reports" class="sidebar-link flex items-center gap-3"
+           th:classappend="${currentPage == 'reports'} ? 'active' : 'text-slate-600'">
+            <i data-lucide="file-bar-chart" class="w-5 h-5"></i>
+            <span class="text-sm font-medium">Báo cáo</span>
+        </a>
+        <a href="/admin/logs" class="sidebar-link flex items-center gap-3"
+           th:classappend="${currentPage == 'logs'} ? 'active' : 'text-slate-600'">
+            <i data-lucide="scroll-text" class="w-5 h-5"></i>
+            <span class="text-sm font-medium">Logs hệ thống</span>
+        </a>
+    </nav>
+
+    <!-- User Info -->
+    <div class="p-4 border-t border-slate-100">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+                <span class="text-white text-sm font-bold" th:text="${#strings.substring(userName, 0, 1)}">A</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-slate-700 truncate" th:text="${userName}">Super Admin</p>
+                <p class="text-xs text-slate-400">Quản trị viên</p>
+            </div>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="p-2 hover:bg-red-50 rounded-lg transition-all" title="Đăng xuất">
+                    <i data-lucide="log-out" class="w-4 h-4 text-red-400"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</aside>
+</body>
+</html>

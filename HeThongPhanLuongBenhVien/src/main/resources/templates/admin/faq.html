@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Cấu hình FAQ')}"></head>
+<body class="min-h-screen bg-medical-bg">
+    <div th:replace="~{fragments/sidebar-admin :: sidebar}"></div>
+
+    <main class="ml-64 p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-800">❓ Cấu hình câu hỏi FAQ</h1>
+                <p class="text-sm text-slate-500 mt-1">Quản lý câu hỏi thường gặp cho Chatbot AI tự động trả lời</p>
+            </div>
+            <button onclick="document.getElementById('addFaqModal').classList.remove('hidden')"
+                    class="px-5 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all text-sm flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> Thêm câu FAQ
+            </button>
+        </div>
+
+        <!-- FAQ List -->
+        <div class="space-y-3">
+            <div th:each="faq, stat : ${faqList}" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden" x-data="{ open: false }">
+                <div class="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-slate-50 transition-all" @click="open = !open">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span class="text-xs font-bold text-primary" th:text="${stat.index + 1}">1</span>
+                        </div>
+                        <p class="font-semibold text-slate-800 text-sm" th:text="${faq.question}">Giờ làm việc của bệnh viện?</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <form th:action="@{/admin/faq/{id}/delete(id=${faq.id})}" method="post" onclick="event.stopPropagation()">
+                            <button type="submit" onclick="return confirm('Xóa câu FAQ này?')" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-all">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                        <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400 transition-transform" :class="open && 'rotate-180'"></i>
+                    </div>
+                </div>
+                <div x-show="open" x-transition class="px-6 pb-4 border-t border-slate-100">
+                    <p class="text-sm text-slate-600 py-3 leading-relaxed" th:text="${faq.answer}">Bệnh viện hoạt động từ 7:00 - 17:00...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty -->
+        <div th:if="${#lists.isEmpty(faqList)}" class="text-center py-16">
+            <div class="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="help-circle" class="w-10 h-10 text-slate-300"></i>
+            </div>
+            <p class="text-sm text-slate-500">Chưa có câu FAQ nào. Bấm "Thêm câu FAQ" để bắt đầu.</p>
+        </div>
+    </main>
+
+    <!-- Add FAQ Modal -->
+    <div id="addFaqModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 mx-4">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">➕ Thêm câu FAQ mới</h3>
+            <form th:action="@{/admin/faq}" method="post" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Câu hỏi</label>
+                    <input type="text" name="question" required placeholder="VD: Bệnh viện có khám ngoài giờ không?"
+                           class="w-full py-3 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Câu trả lời</label>
+                    <textarea name="answer" required rows="4" placeholder="Nhập câu trả lời chi tiết..."
+                              class="w-full py-3 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-primary resize-none"></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl text-sm">Lưu câu FAQ</button>
+                    <button type="button" onclick="document.getElementById('addFaqModal').classList.add('hidden')" class="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm hover:bg-slate-50">Hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

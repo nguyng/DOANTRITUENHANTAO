@@ -1,6 +1,0 @@
-text,intent,department,severity
-"Bác sĩ ơi tôi bị đau quặn bụng, đi ngoài phân đen 3 ngày nay, thỉnh thoảng nôn ra dịch chua. Giúp tôi với.",SYMPTOM,Khoa Tiêu Hoá,EMERGENCY
-"Cháu nhà tôi 5 tuổi bị nổi mẩn đỏ khắp người, ngứa ngáy nhiều vào ban đêm, kèm sốt nhẹ.",SYMPTOM,Khoa Nhi,MEDIUM
-"Tôi bị nhói tim, cảm giác thắt lại ở ngực trái lan ra cánh tay trái, mồ hôi vã ra.",SYMPTOM,Khoa Tim Mạch,EMERGENCY
-"Dạo này tôi hay bị quên, đau nửa đầu bên phải, mất ngủ triền miên làm việc không tập trung được.",SYMPTOM,Khoa Thần Kinh,MEDIUM
-"Da mặt tôi tự nhiên nổi rất nhiều mụn nước nhỏ, rát và đỏ sau khi dùng kem dưỡng ẩm mới.",SYMPTOM,Khoa Da Liễu,MEDIUM

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Quản lý nhân viên')}"></head>
+<body class="min-h-screen bg-medical-bg">
+    <div th:replace="~{fragments/sidebar-admin :: sidebar}"></div>
+
+    <main class="ml-64 p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-800">👥 Quản lý nhân viên</h1>
+                <p class="text-sm text-slate-500 mt-1">Quản lý tài khoản Bác sĩ, Y tá trong hệ thống</p>
+            </div>
+            <button onclick="document.getElementById('addModal').classList.remove('hidden')"
+                    class="px-5 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all text-sm flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-4 h-4"></i> Thêm nhân viên
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex flex-wrap gap-3 mb-6">
+            <a href="/admin/staff" class="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+               th:classappend="${filterRole == null} ? 'bg-primary text-white' : 'bg-white text-slate-600 border border-slate-200 hover:border-primary'">
+                Tất cả
+            </a>
+            <a href="/admin/staff?role=DOCTOR" class="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+               th:classappend="${filterRole == 'DOCTOR'} ? 'bg-primary text-white' : 'bg-white text-slate-600 border border-slate-200 hover:border-primary'">
+                🩺 Bác sĩ
+            </a>
+            <a href="/admin/staff?role=NURSE" class="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+               th:classappend="${filterRole == 'NURSE'} ? 'bg-primary text-white' : 'bg-white text-slate-600 border border-slate-200 hover:border-primary'">
+                💉 Y tá
+            </a>
+        </div>
+
+        <!-- Staff Table -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-left text-xs text-slate-400 uppercase tracking-wider">
+                            <th class="px-6 py-4">Nhân viên</th>
+                            <th class="px-6 py-4">Tài khoản</th>
+                            <th class="px-6 py-4">Chức vụ</th>
+                            <th class="px-6 py-4">Khoa</th>
+                            <th class="px-6 py-4">SĐT</th>
+                            <th class="px-6 py-4 text-center">Trạng thái</th>
+                            <th class="px-6 py-4 text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="s : ${staffList}" class="border-t border-slate-50 hover:bg-slate-50/50 transition-all">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                                         th:classappend="${s.role == 'DOCTOR'} ? 'bg-gradient-to-br from-primary to-primary-dark' : 'bg-gradient-to-br from-emerald-500 to-green-600'">
+                                        <span th:text="${#strings.substring(s.fullName, 0, 1)}">N</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-slate-800" th:text="${s.fullName}">BS. Nguyễn Minh</p>
+                                        <p class="text-xs text-slate-400" th:text="${s.email}">bs.minh@medassist.vn</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 font-mono text-xs text-slate-500" th:text="${s.bhytNumber}">BS_MINH</td>
+                            <td class="px-6 py-4">
+                                <span class="text-xs font-semibold px-3 py-1 rounded-full"
+                                      th:classappend="${s.role == 'DOCTOR'} ? 'bg-primary/10 text-primary' : 'bg-emerald-50 text-emerald-600'"
+                                      th:text="${s.role == 'DOCTOR'} ? 'Bác sĩ' : 'Y tá'">Bác sĩ</span>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 text-xs" th:text="${s.departmentName}">Khoa Cấp Cứu</td>
+                            <td class="px-6 py-4 text-slate-500 text-xs" th:text="${s.phone}">0911111111</td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="text-xs font-semibold px-3 py-1 rounded-full"
+                                      th:classappend="${s.isActive} ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'"
+                                      th:text="${s.isActive} ? 'Hoạt động' : 'Đã khóa'">Hoạt động</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button class="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-slate-100 transition-all" title="Sửa">
+                                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                                    </button>
+                                    <form th:action="@{/admin/staff/{id}/toggle(id=${s.id})}" method="post">
+                                        <button type="submit" class="p-2 rounded-lg transition-all" title="Khóa / Mở khóa"
+                                                th:classappend="${s.isActive} ? 'bg-red-50 text-red-400 hover:bg-red-100' : 'bg-emerald-50 text-emerald-500 hover:bg-emerald-100'">
+                                            <i th:data-lucide="${s.isActive} ? 'lock' : 'unlock'" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Staff Modal -->
+    <div id="addModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 mx-4">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">➕ Thêm nhân viên mới</h3>
+            <form th:action="@{/admin/staff}" method="post" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Họ và tên</label>
+                        <input type="text" name="fullName" required class="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Tài khoản (username)</label>
+                        <input type="text" name="bhytNumber" required class="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Chức vụ</label>
+                        <select name="role" required class="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-primary">
+                            <option value="DOCTOR">Bác sĩ</option>
+                            <option value="NURSE">Y tá</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Khoa</label>
+                        <select name="departmentId" required class="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-primary">
+                            <option th:each="d : ${departments}" th:value="${d.id}" th:text="${d.name}">Khoa Nội</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Email</label>
+                        <input type="email" name="email" class="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">SĐT</label>
+                        <input type="text" name="phone" class="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-primary">
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400">Mật khẩu mặc định: <strong>Admin@123</strong></p>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl text-sm">Tạo tài khoản</button>
+                    <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')" class="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm hover:bg-slate-50">Hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

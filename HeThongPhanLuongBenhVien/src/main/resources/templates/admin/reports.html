@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Báo cáo')}"></head>
+<body class="min-h-screen bg-medical-bg">
+    <div th:replace="~{fragments/sidebar-admin :: sidebar}"></div>
+
+    <main class="ml-64 p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-800">📈 Báo cáo & Thống kê</h1>
+                <p class="text-sm text-slate-500 mt-1">Xem và xuất báo cáo hoạt động bệnh viện</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <select class="py-2.5 px-4 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-primary">
+                    <option>7 ngày gần nhất</option>
+                    <option>30 ngày gần nhất</option>
+                    <option>Tháng này</option>
+                    <option>Quý này</option>
+                </select>
+                <button class="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-all text-sm flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> Xuất Excel
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-2xl border border-slate-100 p-5">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Tổng lượt khám</p>
+                <p class="text-3xl font-extrabold text-slate-800 mt-1" th:text="${report.totalVisits}">342</p>
+                <p class="text-xs text-emerald-500 mt-1">↑ 12% so với tuần trước</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Doanh thu tổng</p>
+                <p class="text-2xl font-extrabold text-primary mt-1" th:text="${report.totalRevenue}">125,500,000đ</p>
+                <p class="text-xs text-emerald-500 mt-1">↑ 8% so với tuần trước</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">BHYT chi trả</p>
+                <p class="text-2xl font-extrabold text-emerald-600 mt-1" th:text="${report.totalInsurance}">98,200,000đ</p>
+                <p class="text-xs text-slate-400 mt-1">78% tổng chi phí</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Độ chính xác AI</p>
+                <p class="text-3xl font-extrabold text-purple-600 mt-1" th:text="${report.aiAccuracy}">91.2%</p>
+                <p class="text-xs text-slate-400 mt-1">Trên 5,674 mẫu huấn luyện</p>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-2xl border border-slate-100 p-6">
+                <h3 class="font-bold text-slate-800 mb-4">Lượt khám theo ngày</h3>
+                <canvas id="visitChart" height="250"></canvas>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-6">
+                <h3 class="font-bold text-slate-800 mb-4">Phân bổ theo mức khẩn cấp</h3>
+                <canvas id="severityChart" height="250"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Departments Table -->
+        <div class="bg-white rounded-2xl border border-slate-100 p-6">
+            <h3 class="font-bold text-slate-800 mb-4">Top Khoa có lượt khám nhiều nhất</h3>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs text-slate-400 uppercase tracking-wider">
+                        <th class="pb-3">#</th>
+                        <th class="pb-3">Khoa</th>
+                        <th class="pb-3 text-center">Lượt khám</th>
+                        <th class="pb-3 text-right">Doanh thu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="item, stat : ${topDepartments}" class="border-t border-slate-50">
+                        <td class="py-3 text-slate-400" th:text="${stat.index + 1}">1</td>
+                        <td class="py-3 font-semibold text-slate-800" th:text="${item.name}">Khoa Cấp Cứu</td>
+                        <td class="py-3 text-center text-primary font-bold" th:text="${item.visitCount}">45</td>
+                        <td class="py-3 text-right text-slate-700" th:text="${item.revenue}">15,200,000đ</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        lucide.createIcons();
+
+        new Chart(document.getElementById('visitChart'), {
+            type: 'line',
+            data: {
+                labels: ['T2','T3','T4','T5','T6','T7','CN'],
+                datasets: [{
+                    label: 'Lượt khám',
+                    data: [35, 42, 38, 55, 50, 30, 12],
+                    borderColor: '#0077B6',
+                    backgroundColor: 'rgba(0,119,182,0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#0077B6'
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+
+        new Chart(document.getElementById('severityChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Bình thường', 'Trung bình', 'Cấp cứu'],
+                datasets: [{ data: [65, 25, 10], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'] }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } } } }
+        });
+    </script>
+</body>
+</html>

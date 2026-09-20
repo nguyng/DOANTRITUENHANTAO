@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Navbar cho Bệnh nhân -->
+<nav th:fragment="navbar" class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+
+            <!-- Logo -->
+            <a href="/chat" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center">
+                    <i data-lucide="heart-pulse" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <span class="text-lg font-bold gradient-text">MedAssist</span>
+                    <span class="text-xs text-slate-400 block -mt-1">Trợ lý AI Bệnh viện</span>
+                </div>
+            </a>
+
+            <!-- Navigation Links (Desktop) -->
+            <div class="hidden md:flex items-center gap-1">
+                <a href="/chat" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-primary hover:bg-primary/5 transition-all"
+                   th:classappend="${currentPage == 'chat'} ? 'bg-primary/10 text-primary' : ''">
+                    <i data-lucide="message-circle" class="w-4 h-4 inline mr-1"></i> Chat AI
+                </a>
+                <a href="/ticket" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-primary hover:bg-primary/5 transition-all"
+                   th:classappend="${currentPage == 'ticket'} ? 'bg-primary/10 text-primary' : ''">
+                    <i data-lucide="ticket" class="w-4 h-4 inline mr-1"></i> Phiếu khám
+                </a>
+                <a href="/visits" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-primary hover:bg-primary/5 transition-all"
+                   th:classappend="${currentPage == 'visits'} ? 'bg-primary/10 text-primary' : ''">
+                    <i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i> Lịch sử khám
+                </a>
+                <a href="/directions" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-primary hover:bg-primary/5 transition-all"
+                   th:classappend="${currentPage == 'directions'} ? 'bg-primary/10 text-primary' : ''">
+                    <i data-lucide="map-pin" class="w-4 h-4 inline mr-1"></i> Chỉ đường
+                </a>
+            </div>
+
+            <!-- User Menu -->
+            <div class="flex items-center gap-3" x-data="{ open: false }">
+                <div class="relative">
+                    <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-all">
+                        <div class="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                            <span class="text-white text-sm font-bold" th:text="${#strings.substring(userName, 0, 1)}">L</span>
+                        </div>
+                        <span class="hidden sm:block text-sm font-medium text-slate-700" th:text="${userName}">Nguyễn Thị Lan</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+                    </button>
+
+                    <!-- Dropdown -->
+                    <div x-show="open" @click.away="open = false" x-transition
+                         class="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2">
+                        <a href="/profile" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-all">
+                            <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-sm text-slate-700">Thông tin cá nhân</span>
+                        </a>
+                        <a href="/change-password" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-all">
+                            <i data-lucide="key" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-sm text-slate-700">Đổi mật khẩu</span>
+                        </a>
+                        <hr class="my-1 border-slate-100">
+                        <form th:action="@{/logout}" method="post">
+                            <button type="submit" class="flex items-center gap-3 px-4 py-3 hover:bg-red-50 transition-all w-full text-left">
+                                <i data-lucide="log-out" class="w-4 h-4 text-red-400"></i>
+                                <span class="text-sm text-red-600">Đăng xuất</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div class="md:hidden border-t border-slate-100 px-2 py-2 flex justify-around">
+        <a href="/chat" class="flex flex-col items-center gap-1 px-3 py-1 rounded-xl text-xs"
+           th:classappend="${currentPage == 'chat'} ? 'text-primary' : 'text-slate-400'">
+            <i data-lucide="message-circle" class="w-5 h-5"></i> Chat
+        </a>
+        <a href="/ticket" class="flex flex-col items-center gap-1 px-3 py-1 rounded-xl text-xs"
+           th:classappend="${currentPage == 'ticket'} ? 'text-primary' : 'text-slate-400'">
+            <i data-lucide="ticket" class="w-5 h-5"></i> Phiếu
+        </a>
+        <a href="/visits" class="flex flex-col items-center gap-1 px-3 py-1 rounded-xl text-xs"
+           th:classappend="${currentPage == 'visits'} ? 'text-primary' : 'text-slate-400'">
+            <i data-lucide="file-text" class="w-5 h-5"></i> Lịch sử
+        </a>
+        <a href="/directions" class="flex flex-col items-center gap-1 px-3 py-1 rounded-xl text-xs"
+           th:classappend="${currentPage == 'directions'} ? 'text-primary' : 'text-slate-400'">
+            <i data-lucide="map-pin" class="w-5 h-5"></i> Chỉ đường
+        </a>
+    </div>
+</nav>
+</body>
+</html>

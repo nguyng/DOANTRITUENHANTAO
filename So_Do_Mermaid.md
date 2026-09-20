@@ -17,7 +17,7 @@ graph TD
     A --> A1["1.1 Đăng nhập bằng Mã BHYT"]
     A --> A2["1.2 Đổi mật khẩu"]
     A --> A3["1.3 Xem thông tin cá nhân & BHYT"]
-    A --> A4["1.4 Admin cấp tài khoản bệnh nhân"]
+    A --> A4["1.4 Tra cứu chỉ dẫn đường đi"]
 
     B --> B1["2.1 Phân tích triệu chứng (PhoBERT)"]
     B --> B2["2.2 Trả lời câu hỏi FAQ"]
@@ -33,11 +33,10 @@ graph TD
     D --> D2["4.2 Xem chi tiết lần khám"]
     D --> D3["4.3 Xem đơn thuốc & chi phí"]
 
-    E --> E1["5.1 Quản lý Khoa/Phòng"]
-    E --> E2["5.2 Quản lý tài khoản nhân viên"]
-    E --> E3["5.3 Cấu hình câu FAQ"]
-    E --> E4["5.4 Thống kê & báo cáo"]
-    E --> E5["5.5 Xem Logs hệ thống"]
+    E --> E1["5.1 Quản lý tài khoản nhân viên"]
+    E --> E2["5.2 Cấu hình câu FAQ"]
+    E --> E3["5.3 Thống kê & báo cáo"]
+    E --> E4["5.4 Xem Logs hệ thống"]
 
     style ROOT fill:#1a73e8,color:#fff,font-weight:bold
     style A fill:#34a853,color:#fff
@@ -76,12 +75,11 @@ graph LR
         UC13["UC13: Gọi số tiếp theo"]
         UC14["UC14: Chuyển bệnh nhân sang Khoa khác"]
         UC15["UC15: Tra cứu hồ sơ bệnh nhân"]
-        UC16["UC16: Tạo & cấp tài khoản bệnh nhân"]
-        UC17["UC17: Quản lý Khoa/Phòng"]
         UC18["UC18: Quản lý nhân viên"]
         UC19["UC19: Xem thống kê & báo cáo"]
         UC20["UC20: Cấu hình câu FAQ"]
         UC22["UC22: Hiển thị STT hành lang"]
+        UC23["UC23: Tra cứu chỉ dẫn đường đi"]
     end
 
     BN --> UC01
@@ -95,14 +93,13 @@ graph LR
     BN --> UC09
     BN --> UC10
     BN --> UC11
+    BN --> UC23
 
     YT --> UC12
     YT --> UC13
     YT --> UC14
     YT --> UC15
 
-    AD --> UC16
-    AD --> UC17
     AD --> UC18
     AD --> UC19
     AD --> UC20
@@ -544,8 +541,8 @@ stateDiagram-v2
 ```mermaid
 graph TB
     subgraph CLIENT["🖥️ CLIENT LAYER (Tier 1)"]
-        BNW["React.js\nGiao diện Bệnh nhân"]
-        NUR["React.js\nDashboard Y tá"]
+        BNW["Thymeleaf\nGiao diện Bệnh nhân"]
+        NUR["Thymeleaf\nDashboard Y tá"]
         DIS["Public Display\nMàn hình Hành lang"]
     end
 
@@ -597,7 +594,7 @@ graph TB
 ```mermaid
 graph LR
     subgraph FE["Frontend"]
-        RC["React.js\n(Vite + TailwindCSS)"]
+        RC["Thymeleaf\n(HTML + Tailwind)"]
     end
 
     subgraph BE["Backend"]
@@ -636,7 +633,7 @@ graph LR
 graph TB
     subgraph SERVER["🖥️ Server / Docker Host"]
         subgraph DC["Docker Compose Network: medassist-net"]
-            NGINX["nginx:alpine\nport: 80, 443\n→ serve React build"]
+            NGINX["nginx:alpine\nport: 80, 443\n→ Reverse Proxy"]
             SB["spring-boot-app\nport: 8080"]
             NLP["fastapi-nlp\nport: 8001\n(PhoBERT model)"]
             CV["fastapi-cv\nport: 8002\n(YOLOv8 + VietOCR)"]
@@ -715,36 +712,36 @@ flowchart TD
     START(["🟢 Bắt đầu thanh toán"])
     GET_VISIT["Lấy thông tin VISIT_RECORDS"]
     GET_RATE["Lấy bhyt_discount_rate của Bệnh nhân"]
-    
+  
     LOOP_ITEMS{"Còn Dịch vụ/Thuốc\nchưa duyệt?"}
-    
+  
     CHECK_COVERED{"Có thuộc DM\nBHYT chi trả?"}
-    
+  
     CALC_NO_BHYT["patient_co_pay = price\nbhyt_pay = 0"]
-    
+  
     CALC_BASE_PRICE["Giá cơ sở = Min(price, bhyt_price_limit)"]
     CALC_BHYT["bhyt_pay = Giá cơ sở × bhyt_discount_rate\npatient_co_pay = price - bhyt_pay"]
-    
+  
     SUM_TOTAL["Cộng dồn vào Tổng: original_cost, insurance_paid, final_cost"]
-    
+  
     SAVE_DB["Lưu CSDL & Xuất hóa đơn"]
     END(["🔴 Kết thúc"])
 
     START --> GET_VISIT
     GET_VISIT --> GET_RATE
     GET_RATE --> LOOP_ITEMS
-    
+  
     LOOP_ITEMS -->|"Có"| CHECK_COVERED
-    
+  
     CHECK_COVERED -->|"Không (false)"| CALC_NO_BHYT
     CHECK_COVERED -->|"Có (true)"| CALC_BASE_PRICE
     CALC_BASE_PRICE --> CALC_BHYT
-    
+  
     CALC_NO_BHYT --> SUM_TOTAL
     CALC_BHYT --> SUM_TOTAL
-    
+  
     SUM_TOTAL --> LOOP_ITEMS
-    
+  
     LOOP_ITEMS -->|"Hết"| SAVE_DB
     SAVE_DB --> END
 
@@ -753,4 +750,46 @@ flowchart TD
     style LOOP_ITEMS fill:#fbbc04,color:#000
     style CHECK_COVERED fill:#fbbc04,color:#000
     style GET_RATE fill:#1a73e8,color:#fff
+```
+
+```mermaid
+graph TD
+    ROOT["🏥 HỆ THỐNG MEDASSIST AI"]
+
+    ROOT --> A["1. Quản lý Người dùng"]
+    ROOT --> B["2. Chat AI - Trợ lý ảo"]
+    ROOT --> C["3. Quản lý Hàng đợi"]
+    ROOT --> D["4. Lịch sử Khám bệnh"]
+    ROOT --> E["5. Quản trị hệ thống"]
+
+    A --> A1["1.1 Đăng nhập bằng Mã BHYT"]
+    A --> A2["1.2 Đổi mật khẩu"]
+    A --> A3["1.3 Xem thông tin cá nhân & BHYT"]
+
+    B --> B1["2.1 Phân tích triệu chứng (PhoBERT)"]
+    B --> B2["2.2 Trả lời câu hỏi FAQ"]
+    B --> B3["2.3 OCR nhận diện thẻ BHYT (YOLOv8)"]
+    B --> B4["2.4 Phát hiện mức độ khẩn cấp"]
+
+    C --> C1["3.1 Bốc số thứ tự khám"]
+    C --> C2["3.2 Y tá gọi số tiếp theo"]
+    C --> C3["3.3 Chuyển khoa"]
+    C --> C4["3.4 Hủy phiếu khám"]
+
+    D --> D1["4.1 Xem danh sách lần khám"]
+    D --> D2["4.2 Xem chi tiết lần khám"]
+    D --> D3["4.3 Xem đơn thuốc & chi phí"]
+
+    E --> E1["5.1 Quản lý Khoa/Phòng & Chỉ dẫn đường đi"]
+    E --> E2["5.2 Quản lý tài khoản nhân viên"]
+    E --> E3["5.3 Cấu hình câu FAQ"]
+    E --> E4["5.4 Thống kê & báo cáo"]
+    E --> E5["5.5 Xem Logs hệ thống"]
+
+    style ROOT fill:#1a73e8,color:#fff,font-weight:bold
+    style A fill:#34a853,color:#fff
+    style B fill:#ea4335,color:#fff
+    style C fill:#fbbc04,color:#000
+    style D fill:#9c27b0,color:#fff
+    style E fill:#ff7043,color:#fff
 ```

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Phiếu khám')}"></head>
+<body class="min-h-screen bg-medical-bg flex flex-col">
+
+    <div th:replace="~{fragments/navbar-patient :: navbar}"></div>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-8">
+
+        <!-- Khi CHƯA có phiếu khám -->
+        <div th:if="${ticket == null}" class="text-center py-20">
+            <div class="w-24 h-24 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="ticket" class="w-12 h-12 text-slate-300"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-700 mb-2">Chưa có phiếu khám</h2>
+            <p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">
+                Bạn hãy chat với AI trước để được phân luồng đến đúng khoa, sau đó bấm "Xác nhận đăng ký" để nhận phiếu.
+            </p>
+            <a href="/chat" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all text-sm">
+                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                Chat với AI ngay
+            </a>
+        </div>
+
+        <!-- Khi CÓ phiếu khám -->
+        <div th:if="${ticket != null}">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-extrabold text-slate-800">Phiếu khám của bạn</h1>
+                <p class="text-sm text-slate-500 mt-1">Vui lòng chờ gọi số tại khu vực sảnh chờ</p>
+            </div>
+
+            <!-- Ticket Card -->
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden max-w-md mx-auto">
+                <!-- Header gradient -->
+                <div class="bg-gradient-to-r from-primary to-primary-dark px-6 py-5 text-center">
+                    <p class="text-white/70 text-xs font-medium uppercase tracking-wider">Số thứ tự</p>
+                    <p class="text-7xl font-extrabold text-white mt-1" th:text="${ticket.ticketNumber}">007</p>
+                </div>
+
+                <!-- Info -->
+                <div class="p-6 space-y-4">
+                    <!-- Khoa -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-sm text-slate-500">Khoa khám</span>
+                        </div>
+                        <span class="text-sm font-semibold text-slate-800" th:text="${ticket.departmentName}">Khoa Tim Mạch</span>
+                    </div>
+
+                    <!-- Trạng thái -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="activity" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-sm text-slate-500">Trạng thái</span>
+                        </div>
+                        <span class="text-xs font-semibold px-3 py-1 rounded-full"
+                              th:classappend="${ticket.status == 'WAITING'} ? 'status-waiting' : (${ticket.status == 'CALLED'} ? 'status-called pulse-call' : 'status-done')"
+                              th:text="${ticket.status == 'WAITING'} ? 'Đang chờ' : (${ticket.status == 'CALLED'} ? '📢 Đến lượt bạn!' : 'Hoàn tất')">
+                            Đang chờ
+                        </span>
+                    </div>
+
+                    <!-- Mức khẩn cấp -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-sm text-slate-500">Mức khẩn cấp</span>
+                        </div>
+                        <span class="text-xs font-semibold px-3 py-1 rounded-full"
+                              th:classappend="${ticket.severity == 'EMERGENCY'} ? 'badge-emergency' : (${ticket.severity == 'MEDIUM'} ? 'badge-medium' : 'badge-normal')"
+                              th:text="${ticket.severity}">NORMAL</span>
+                    </div>
+
+                    <!-- Thời gian -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-sm text-slate-500">Đăng ký lúc</span>
+                        </div>
+                        <span class="text-sm text-slate-600" th:text="${#temporals.format(ticket.createdAt, 'HH:mm — dd/MM/yyyy')}">09:30 — 20/09/2026</span>
+                    </div>
+
+                    <!-- Chỉ dẫn đường đi -->
+                    <div th:if="${ticket.locationGuide}" class="bg-blue-50 rounded-xl p-4 mt-2">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="navigation" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
+                            <div>
+                                <p class="text-xs font-semibold text-primary">Chỉ dẫn đường đi</p>
+                                <p class="text-xs text-slate-600 mt-0.5" th:text="${ticket.locationGuide}">Từ sảnh chính...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="px-6 pb-6" th:if="${ticket.status == 'WAITING'}">
+                    <form th:action="@{/tickets/{id}/cancel(id=${ticket.id})}" method="post">
+                        <button type="submit" onclick="return confirm('Bạn chắc chắn muốn hủy phiếu khám?')"
+                                class="w-full py-2.5 border-2 border-red-200 text-red-500 font-semibold rounded-xl hover:bg-red-50 transition-all text-sm">
+                            Hủy phiếu khám
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -176,16 +176,16 @@ Luong 4 - Quan ly benh nhan (Admin):
 
 ```
 Cac Entity va quan he:
-- USERS (id[PK], bhyt_number[UNIQUE], password_hash, full_name, role, bhyt_discount_rate, ...)
-- DEPARTMENTS (id[PK], name, code, floor, room_numbers, ...)
-- QUEUE_TICKETS (id[PK], patient_id[FK->USERS], department_id[FK->DEPARTMENTS], ticket_number, status, ...)
+- USERS (id[PK], bhyt_number[UNIQUE], password_hash, full_name, role, department_id[FK->DEPARTMENTS], bhyt_discount_rate, ...)
+- DEPARTMENTS (id[PK], name, code, building, floor, room_numbers, location_guide, ...)
+- QUEUE_TICKETS (id[PK], patient_id[FK->USERS], department_id[FK->DEPARTMENTS], ticket_number, status, severity, ...)
 - MEDICAL_SERVICES (id[PK], name, price, is_bhyt_covered, bhyt_price_limit)
 - MEDICINES (id[PK], name, price, is_bhyt_covered, bhyt_price_limit)
-- VISIT_RECORDS (id[PK], patient_id[FK->USERS], department_id[FK->DEPARTMENTS], doctor_id[FK->USERS], original_cost, insurance_paid, final_cost, ...)
+- VISIT_RECORDS (id[PK], patient_id[FK->USERS], department_id[FK->DEPARTMENTS], doctor_id[FK->USERS], ticket_id[FK->QUEUE_TICKETS], original_cost, insurance_paid, final_cost, ...)
 - VISIT_SERVICES (id[PK], visit_id[FK->VISIT_RECORDS], service_id[FK->MEDICAL_SERVICES], patient_co_pay, bhyt_pay)
 - PRESCRIPTIONS (id[PK], visit_id[FK->VISIT_RECORDS], medicine_id[FK->MEDICINES], dosage, quantity, patient_co_pay, bhyt_pay, ...)
 - CHAT_SESSIONS (id[PK], user_id[FK->USERS], started_at, ended_at)
-- CHAT_MESSAGES (id[PK], session_id[FK->CHAT_SESSIONS], sender_role, content, message_type, ...)
+- CHAT_MESSAGES (id[PK], session_id[FK->CHAT_SESSIONS], sender_role[USER/BOT/SYSTEM], content, message_type, ...)
 - AI_ANALYSIS_LOGS (id[PK], message_id[FK->CHAT_MESSAGES], predicted_dept, confidence_score, severity, ...)
 
 Quan he:
@@ -195,7 +195,9 @@ VISIT_RECORDS (1) ---< VISIT_SERVICES (N)
 MEDICAL_SERVICES (1) ---< VISIT_SERVICES (N)
 VISIT_RECORDS (1) ---< PRESCRIPTIONS (N)
 MEDICINES (1) ---< PRESCRIPTIONS (N)
+QUEUE_TICKETS (1) ---< VISIT_RECORDS (1)
 DEPARTMENTS (1) ---< QUEUE_TICKETS (N)
+DEPARTMENTS (1) ---< USERS (N) [Doctor/Nurse]
 USERS (1) ---< CHAT_SESSIONS (N)
 CHAT_SESSIONS (1) ---< CHAT_MESSAGES (N)
 CHAT_MESSAGES (1) ---< AI_ANALYSIS_LOGS (1)
@@ -305,7 +307,7 @@ AI Service Python:
 - **Cac thanh phan chinh:**
 
 ```
-[React Frontend]        --HTTP REST / WebSocket-->  [Spring Boot Backend]
+[Thymeleaf Frontend]    --HTTP REST / WebSocket-->  [Spring Boot Backend]
 [Spring Boot Backend]   --REST API-->               [FastAPI NLP Service]
 [Spring Boot Backend]   --REST API-->               [FastAPI CV Service]
 [Spring Boot Backend]   --JDBC-->                   [PostgreSQL]
@@ -338,7 +340,7 @@ Container: minio/minio          -> port 9000
 Container: spring-boot-app      -> port 8080
 Container: fastapi-nlp          -> port 8001
 Container: fastapi-cv           -> port 8002
-Container: nginx + react build  -> port 80 / 3000
+Container: nginx (Reverse Proxy) -> port 80 / 443
 ```
 
 ---

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Chi tiết khám')}"></head>
+<body class="min-h-screen bg-medical-bg flex flex-col">
+    <div th:replace="~{fragments/navbar-patient :: navbar}"></div>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-8">
+        <!-- Back -->
+        <a href="/visits" class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary mb-6 transition-all">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Quay lại danh sách
+        </a>
+
+        <h1 class="text-2xl font-extrabold text-slate-800 mb-6" th:text="${visit.visitName}">Khám tổng quát</h1>
+
+        <!-- Visit Info -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
+            <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="stethoscope" class="w-5 h-5 text-primary"></i> Thông tin lần khám
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-xs text-slate-400">Khoa khám</p>
+                    <p class="text-sm font-semibold text-slate-800 mt-0.5" th:text="${visit.departmentName}">Khoa Nội</p>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-xs text-slate-400">Bác sĩ phụ trách</p>
+                    <p class="text-sm font-semibold text-slate-800 mt-0.5" th:text="${visit.doctorName} ?: 'Chưa chỉ định'">BS. Nguyễn Minh</p>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-xs text-slate-400">Ngày khám</p>
+                    <p class="text-sm font-semibold text-slate-800 mt-0.5" th:text="${#temporals.format(visit.visitDate, 'dd/MM/yyyy')}">20/09/2026</p>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-xs text-slate-400">Chẩn đoán</p>
+                    <p class="text-sm font-semibold text-slate-800 mt-0.5" th:text="${visit.diagnosis} ?: 'Chưa có'">Viêm họng cấp</p>
+                </div>
+            </div>
+            <div th:if="${visit.notes}" class="mt-4 bg-yellow-50 rounded-xl p-3">
+                <p class="text-xs text-slate-400 mb-1">Ghi chú</p>
+                <p class="text-sm text-slate-700" th:text="${visit.notes}">Tái khám sau 7 ngày</p>
+            </div>
+        </div>
+
+        <!-- Cost Breakdown -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
+            <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="receipt" class="w-5 h-5 text-primary"></i> Chi phí thanh toán
+            </h2>
+            <div class="space-y-3">
+                <div class="flex justify-between py-2 border-b border-slate-50">
+                    <span class="text-sm text-slate-500">Tổng chi phí gốc</span>
+                    <span class="text-sm font-semibold text-slate-800" th:text="${#numbers.formatDecimal(visit.originalCost, 0, 'COMMA', 0, 'POINT')} + 'đ'">500,000đ</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-slate-50">
+                    <span class="text-sm text-slate-500">BHYT chi trả</span>
+                    <span class="text-sm font-semibold text-emerald-600" th:text="'-' + ${#numbers.formatDecimal(visit.insurancePaid, 0, 'COMMA', 0, 'POINT')} + 'đ'">-400,000đ</span>
+                </div>
+                <div class="flex justify-between py-2">
+                    <span class="text-sm font-bold text-slate-800">Bệnh nhân thực trả</span>
+                    <span class="text-lg font-extrabold text-primary" th:text="${#numbers.formatDecimal(visit.finalCost, 0, 'COMMA', 0, 'POINT')} + 'đ'">100,000đ</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prescriptions -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="pill" class="w-5 h-5 text-primary"></i> Đơn thuốc
+            </h2>
+            <div th:if="${#lists.isEmpty(prescriptions)}" class="text-center py-8">
+                <p class="text-sm text-slate-400">Chưa có đơn thuốc</p>
+            </div>
+            <div class="overflow-x-auto" th:unless="${#lists.isEmpty(prescriptions)}">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs text-slate-400 uppercase tracking-wider">
+                            <th class="pb-3 pr-4">Tên thuốc</th>
+                            <th class="pb-3 pr-4">Liều dùng</th>
+                            <th class="pb-3 pr-4 text-center">SL</th>
+                            <th class="pb-3 pr-4 text-right">Đơn giá</th>
+                            <th class="pb-3 text-right">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="p : ${prescriptions}" class="border-t border-slate-50">
+                            <td class="py-3 pr-4 font-medium text-slate-800" th:text="${p.medicineName}">Paracetamol 500mg</td>
+                            <td class="py-3 pr-4 text-slate-600" th:text="${p.dosage}">Ngày 3 lần</td>
+                            <td class="py-3 pr-4 text-center" th:text="${p.quantity}">10</td>
+                            <td class="py-3 pr-4 text-right text-slate-600" th:text="${#numbers.formatDecimal(p.unitPrice, 0, 'COMMA', 0, 'POINT')} + 'đ'">2,000đ</td>
+                            <td class="py-3 text-right font-semibold text-slate-800" th:text="${#numbers.formatDecimal(p.totalPrice, 0, 'COMMA', 0, 'POINT')} + 'đ'">20,000đ</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Đăng nhập')}"></head>
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#023E8A] via-[#0077B6] to-[#00B4D8] p-4">
+
+    <!-- Background decoration -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/2 left-1/4 w-64 h-64 bg-[#48CAE4]/10 rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- Login Card -->
+    <div class="relative w-full max-w-md">
+        <!-- Logo & Title -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-white/10 backdrop-blur-lg rounded-3xl flex items-center justify-center mx-auto mb-4 border border-white/20">
+                <i data-lucide="heart-pulse" class="w-10 h-10 text-white"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold text-white tracking-tight">MedAssist AI</h1>
+            <p class="text-white/60 text-sm mt-1">Hệ thống Trợ lý ảo Phân luồng Bệnh viện</p>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/50">
+            <h2 class="text-xl font-bold text-slate-800 mb-1">Đăng nhập</h2>
+            <p class="text-sm text-slate-500 mb-6">Sử dụng Mã BHYT và mật khẩu để truy cập</p>
+
+            <!-- Error message -->
+            <div th:if="${error}" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 flex-shrink-0"></i>
+                <span class="text-sm text-red-600" th:text="${error}">Sai tài khoản hoặc mật khẩu</span>
+            </div>
+
+            <!-- Form -->
+            <form th:action="@{/login}" method="post" class="space-y-4">
+                <!-- Mã BHYT -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Mã BHYT / Tài khoản</label>
+                    <div class="relative">
+                        <i data-lucide="credit-card" class="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" name="username" required placeholder="VD: HN47900000001"
+                               class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm">
+                    </div>
+                </div>
+
+                <!-- Mật khẩu -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Mật khẩu</label>
+                    <div class="relative" x-data="{ show: false }">
+                        <i data-lucide="lock" class="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input :type="show ? 'text' : 'password'" name="password" required placeholder="Nhập mật khẩu"
+                               class="w-full pl-11 pr-12 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm">
+                        <button type="button" @click="show = !show" class="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-lg transition-all">
+                            <i :data-lucide="show ? 'eye-off' : 'eye'" class="w-4 h-4 text-slate-400"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit"
+                        class="w-full py-3 bg-gradient-to-r from-[#0077B6] to-[#023E8A] hover:from-[#023E8A] hover:to-[#0077B6] text-white font-semibold rounded-xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 text-sm">
+                    Đăng nhập
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="flex items-center gap-3 my-6">
+                <div class="flex-1 h-px bg-slate-200"></div>
+                <span class="text-xs text-slate-400">Hướng dẫn</span>
+                <div class="flex-1 h-px bg-slate-200"></div>
+            </div>
+
+            <!-- Info -->
+            <div class="bg-blue-50 rounded-xl p-4 space-y-2">
+                <div class="flex items-start gap-2">
+                    <i data-lucide="info" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
+                    <p class="text-xs text-slate-600"><strong>Bệnh nhân:</strong> Đăng nhập bằng mã số trên thẻ BHYT.</p>
+                </div>
+                <div class="flex items-start gap-2">
+                    <i data-lucide="info" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
+                    <p class="text-xs text-slate-600"><strong>Nhân viên:</strong> Sử dụng tài khoản do Admin cấp.</p>
+                </div>
+                <div class="flex items-start gap-2">
+                    <i data-lucide="info" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
+                    <p class="text-xs text-slate-600"><strong>Mật khẩu mặc định:</strong> 123456 (đổi lần đầu đăng nhập).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-white/40 text-xs mt-6">© 2026 MedAssist AI — Đồ án Trí Tuệ Nhân Tạo</p>
+    </div>
+
+    <!-- Init Lucide Icons -->
+    <script>lucide.createIcons();</script>
+</body>
+</html>
