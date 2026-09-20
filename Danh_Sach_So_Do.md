@@ -172,15 +172,18 @@ Luong 4 - Quan ly benh nhan (Admin):
 
 - **Muc dich:** Thiet ke CSDL: cac bang, thuoc tinh, khoa chinh, khoa ngoai va quan he (1-1, 1-N, N-N).
 - **Cong cu:** dbdiagram.io (khuyen dung), Draw.io
-- **Ghi chu:** 8 bang chinh trong du an
+- **Ghi chu:** 10 bang chinh trong du an
 
 ```
 Cac Entity va quan he:
-- USERS (id[PK], bhyt_number[UNIQUE], password_hash, full_name, role, bhyt_discount_rate, bhyt_expiry_date, ...)
+- USERS (id[PK], bhyt_number[UNIQUE], password_hash, full_name, role, bhyt_discount_rate, ...)
 - DEPARTMENTS (id[PK], name, code, floor, room_numbers, ...)
 - QUEUE_TICKETS (id[PK], patient_id[FK->USERS], department_id[FK->DEPARTMENTS], ticket_number, status, ...)
-- VISIT_RECORDS (id[PK], patient_id[FK->USERS], department_id[FK->DEPARTMENTS], doctor_id[FK->USERS], diagnosis, original_cost, insurance_paid, final_cost, ...)
-- PRESCRIPTIONS (id[PK], visit_id[FK->VISIT_RECORDS], medicine_name, dosage, quantity, unit_price, total_price, ...)
+- MEDICAL_SERVICES (id[PK], name, price, is_bhyt_covered, bhyt_price_limit)
+- MEDICINES (id[PK], name, price, is_bhyt_covered, bhyt_price_limit)
+- VISIT_RECORDS (id[PK], patient_id[FK->USERS], department_id[FK->DEPARTMENTS], doctor_id[FK->USERS], original_cost, insurance_paid, final_cost, ...)
+- VISIT_SERVICES (id[PK], visit_id[FK->VISIT_RECORDS], service_id[FK->MEDICAL_SERVICES], patient_co_pay, bhyt_pay)
+- PRESCRIPTIONS (id[PK], visit_id[FK->VISIT_RECORDS], medicine_id[FK->MEDICINES], dosage, quantity, patient_co_pay, bhyt_pay, ...)
 - CHAT_SESSIONS (id[PK], user_id[FK->USERS], started_at, ended_at)
 - CHAT_MESSAGES (id[PK], session_id[FK->CHAT_SESSIONS], sender_role, content, message_type, ...)
 - AI_ANALYSIS_LOGS (id[PK], message_id[FK->CHAT_MESSAGES], predicted_dept, confidence_score, severity, ...)
@@ -188,7 +191,10 @@ Cac Entity va quan he:
 Quan he:
 USERS (1) ---< QUEUE_TICKETS (N)
 USERS (1) ---< VISIT_RECORDS (N)
+VISIT_RECORDS (1) ---< VISIT_SERVICES (N)
+MEDICAL_SERVICES (1) ---< VISIT_SERVICES (N)
 VISIT_RECORDS (1) ---< PRESCRIPTIONS (N)
+MEDICINES (1) ---< PRESCRIPTIONS (N)
 DEPARTMENTS (1) ---< QUEUE_TICKETS (N)
 USERS (1) ---< CHAT_SESSIONS (N)
 CHAT_SESSIONS (1) ---< CHAT_MESSAGES (N)
@@ -211,7 +217,7 @@ CHAT_MESSAGES (1) ---< AI_ANALYSIS_LOGS (1)
 
 - **Muc dich:** Mo ta luong hoat dong (cac buoc) cua mot chuc nang. Tuong tu flowchart nhung co swimlane phan biet actor.
 - **Cong cu:** Draw.io, PlantUML
-- **Ghi chu:** Can ve 5 Activity Diagram
+- **Ghi chu:** Can ve 6 Activity Diagram
 
 ```
 AD-01: Luong dang nhap bang Ma BHYT
@@ -219,6 +225,7 @@ AD-02: Luong Chat AI phan tich trieu chung -> boc so
 AD-03: Luong OCR nhan dien the BHYT
 AD-04: Luong Y ta goi so va chuyen khoa
 AD-05: Luong Admin tao tai khoan benh nhan
+AD-06: Luong Tinh vien phi BHYT tu dong (Billing)
 ```
 
 ---

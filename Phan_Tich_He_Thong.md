@@ -157,13 +157,19 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 - `created_by`: FK trỏ về Admin đã tạo tài khoản này.
 
 **Bảng `VISIT_RECORDS`** *(Đổi tên từ MEDICAL_RECORDS, cập nhật)*: Mỗi bản ghi là một lần khám bệnh. Các trường quan trọng:
-- `visit_name`: Tên lần khám (VD: *"Khám tổng quát"*, *"Khám chuyên khoa Thần kinh"*).
-- `original_cost`: Giá gốc **trước khi** trừ bảo hiểm.
-- `insurance_paid`: Số tiền bảo hiểm đã chi trả (`= original_cost × bhyt_discount_rate`).
-- `final_cost`: Số tiền bệnh nhân **thực trả** (`= original_cost - insurance_paid`).
-- `diagnosis`: Chẩn đoán bệnh (do bác sĩ nhập).
+- `visit_name`: Tên lần khám.
+- `original_cost`: Giá gốc tổng cộng.
+- `insurance_paid`: Số tiền bảo hiểm đã chi trả (dựa trên chi tiết từng dịch vụ/thuốc).
+- `final_cost`: Số tiền bệnh nhân **thực trả**.
+- `diagnosis`: Chẩn đoán bệnh.
 
-**Bảng `PRESCRIPTIONS`** *(Mới)*: Chi tiết từng loại thuốc trong đơn của một lần khám. Quan hệ 1 `VISIT_RECORDS` — N `PRESCRIPTIONS`.
+**Bảng `MEDICAL_SERVICES`** *(Mới)*: Danh mục dịch vụ y tế, xét nghiệm (Tên, Giá, `is_bhyt_covered`, `bhyt_price_limit`).
+
+**Bảng `VISIT_SERVICES`** *(Mới)*: Chi tiết các dịch vụ bệnh nhân sử dụng trong lần khám. Ghi rõ phần BHYT trả (`bhyt_pay`) và phần bệnh nhân trả (`patient_co_pay`).
+
+**Bảng `MEDICINES`** *(Mới)*: Danh mục thuốc (Tên, Giá, `is_bhyt_covered`, `bhyt_price_limit`).
+
+**Bảng `PRESCRIPTIONS`** *(Cập nhật)*: Chi tiết thuốc bệnh nhân được kê, liên kết với bảng `MEDICINES`. Ghi rõ `bhyt_pay` và `patient_co_pay`.
 
 **Bảng `QUEUE_TICKETS`**: Trái tim của module phân luồng. Số `ticket_number` tự tăng, reset về 1 mỗi ngày.
 
@@ -704,20 +710,28 @@ Mã tỉnh: 79 = TP. Hồ Chí Minh (theo chuẩn BHXH Việt Nam)
 | 8 | `NQ` | Người cao tuổi ≥ 80 tuổi | **100%** | `NQ17900000001` | Vĩnh viễn | Không hết hạn |
 | 9 | `BT` | Hộ gia đình tự nguyện | **80%** | `BT47900000001` | Hàng năm | |
 
-### 11.3. Logic Tính Tiền Theo Mức Hưởng
+### 11.3. Logic Tính Tiền Theo Mức Hưởng (Có xét Danh mục BHYT và Giá trần)
 
-```
-Công thức:
-  insurance_paid = original_cost × bhyt_discount_rate
-  final_cost     = original_cost - insurance_paid
+*Giả định: Hệ thống luôn coi bệnh nhân khám Đúng tuyến (Lý tưởng nhất).*
 
-Ví dụ với cùng một ca khám 750,000đ:
+**Thuật toán quét từng dịch vụ và thuốc:**
+- Nếu `is_bhyt_covered = false` (Không thuộc danh mục BHYT chi trả):
+  $\rightarrow$ Bệnh nhân tự trả 100%. `patient_co_pay = price`, `bhyt_pay = 0`.
+- Nếu `is_bhyt_covered = true` (BHYT chi trả):
+  $\rightarrow$ Xác định giá cơ sở để tính BHYT: $Price_{base} = \min(price, bhyt\_price\_limit)$
+  $\rightarrow$ `bhyt_pay` = $Price_{base} \times bhyt\_discount\_rate$
+  $\rightarrow$ `patient_co_pay` = $price - bhyt\_pay$
 
-  Nhóm HN (Hộ nghèo  - 100%): BH trả 750,000đ  → BN trả:       0đ  ✅ Miễn phí
-  Nhóm CN (Cận nghèo -  95%): BH trả 712,500đ  → BN trả:  37,500đ
-  Nhóm DN (Người LĐ  -  80%): BH trả 600,000đ  → BN trả: 150,000đ
-  Thẻ hết hạn         (  0%): BH trả       0đ  → BN trả: 750,000đ  ⚠️ Toàn bộ
-```
+**Tổng kết hóa đơn (`VISIT_RECORDS`):**
+- `original_cost` = Tổng `price` của tất cả dịch vụ + thuốc.
+- `insurance_paid` = Tổng `bhyt_pay`.
+- `final_cost` = Tổng `patient_co_pay`.
+
+Ví dụ với một ca khám: Tiền khám 100k (BHYT trần 100k), Xét nghiệm ngoài danh mục 300k, Thuốc A 200k (BHYT trần 150k). Bệnh nhân hưởng mức 80% (Người LĐ):
+- Tiền khám: BH trả 100k × 80% = 80k. Bệnh nhân trả 20k.
+- Xét nghiệm (Ngoài DM): BH trả 0đ. Bệnh nhân trả 300k.
+- Thuốc A: Giá tính BH là min(200k, 150k) = 150k. BH trả 150k × 80% = 120k. Bệnh nhân trả: 200k - 120k = 80k.
+$\rightarrow$ **Tổng thanh toán:** Giá gốc = 600k. BH trả = 200k. Bệnh nhân trả = 400k.
 
 ### 11.4. Trường hợp Test Đặc biệt
 

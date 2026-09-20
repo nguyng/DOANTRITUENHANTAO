@@ -249,6 +249,22 @@ erDiagram
         timestamp created_at
     }
 
+    MEDICAL_SERVICES {
+        uuid id PK
+        varchar name
+        decimal price
+        boolean is_bhyt_covered
+        decimal bhyt_price_limit
+    }
+
+    MEDICINES {
+        uuid id PK
+        varchar name
+        decimal price
+        boolean is_bhyt_covered
+        decimal bhyt_price_limit
+    }
+
     VISIT_RECORDS {
         uuid id PK
         uuid patient_id FK
@@ -266,15 +282,24 @@ erDiagram
         timestamp created_at
     }
 
+    VISIT_SERVICES {
+        uuid id PK
+        uuid visit_id FK
+        uuid service_id FK
+        int quantity
+        decimal patient_co_pay
+        decimal bhyt_pay
+    }
+
     PRESCRIPTIONS {
         uuid id PK
         uuid visit_id FK
-        varchar medicine_name
+        uuid medicine_id FK
         varchar dosage
         int quantity
         varchar unit
-        decimal unit_price
-        decimal total_price
+        decimal patient_co_pay
+        decimal bhyt_pay
         text instructions
     }
 
@@ -316,7 +341,10 @@ erDiagram
     USERS ||--o{ USERS : "created_by"
     DEPARTMENTS ||--o{ QUEUE_TICKETS : "department_id"
     DEPARTMENTS ||--o{ VISIT_RECORDS : "department_id"
+    VISIT_RECORDS ||--o{ VISIT_SERVICES : "visit_id"
+    MEDICAL_SERVICES ||--o{ VISIT_SERVICES : "service_id"
     VISIT_RECORDS ||--o{ PRESCRIPTIONS : "visit_id"
+    MEDICINES ||--o{ PRESCRIPTIONS : "medicine_id"
     CHAT_SESSIONS ||--o{ CHAT_MESSAGES : "session_id"
     CHAT_MESSAGES ||--o| AI_ANALYSIS_LOGS : "message_id"
 ```
@@ -676,4 +704,53 @@ graph TD
 
     style LOGIN fill:#1a73e8,color:#fff
     style DISPLAY fill:#9c27b0,color:#fff
+```
+
+---
+
+## 17. Activity Diagram — Luồng tính Viện phí BHYT
+
+```mermaid
+flowchart TD
+    START(["🟢 Bắt đầu thanh toán"])
+    GET_VISIT["Lấy thông tin VISIT_RECORDS"]
+    GET_RATE["Lấy bhyt_discount_rate của Bệnh nhân"]
+    
+    LOOP_ITEMS{"Còn Dịch vụ/Thuốc\nchưa duyệt?"}
+    
+    CHECK_COVERED{"Có thuộc DM\nBHYT chi trả?"}
+    
+    CALC_NO_BHYT["patient_co_pay = price\nbhyt_pay = 0"]
+    
+    CALC_BASE_PRICE["Giá cơ sở = Min(price, bhyt_price_limit)"]
+    CALC_BHYT["bhyt_pay = Giá cơ sở × bhyt_discount_rate\npatient_co_pay = price - bhyt_pay"]
+    
+    SUM_TOTAL["Cộng dồn vào Tổng: original_cost, insurance_paid, final_cost"]
+    
+    SAVE_DB["Lưu CSDL & Xuất hóa đơn"]
+    END(["🔴 Kết thúc"])
+
+    START --> GET_VISIT
+    GET_VISIT --> GET_RATE
+    GET_RATE --> LOOP_ITEMS
+    
+    LOOP_ITEMS -->|"Có"| CHECK_COVERED
+    
+    CHECK_COVERED -->|"Không (false)"| CALC_NO_BHYT
+    CHECK_COVERED -->|"Có (true)"| CALC_BASE_PRICE
+    CALC_BASE_PRICE --> CALC_BHYT
+    
+    CALC_NO_BHYT --> SUM_TOTAL
+    CALC_BHYT --> SUM_TOTAL
+    
+    SUM_TOTAL --> LOOP_ITEMS
+    
+    LOOP_ITEMS -->|"Hết"| SAVE_DB
+    SAVE_DB --> END
+
+    style START fill:#34a853,color:#fff
+    style END fill:#ea4335,color:#fff
+    style LOOP_ITEMS fill:#fbbc04,color:#000
+    style CHECK_COVERED fill:#fbbc04,color:#000
+    style GET_RATE fill:#1a73e8,color:#fff
 ```
