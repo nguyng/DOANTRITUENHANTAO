@@ -47,45 +47,92 @@
             </div>
         </div>
 
-        <!-- AI Result Card (hiện khi AI phân tích xong) -->
+        <!-- AI Result Card — Phân mức M1-M5 -->
         <div th:if="${aiResult}" class="mx-auto w-full max-w-lg mb-4">
-            <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-5">
-                <div class="flex items-center gap-2 mb-3">
-                    <i data-lucide="stethoscope" class="w-5 h-5 text-primary"></i>
-                    <h3 class="font-bold text-slate-800">Kết quả phân tích AI</h3>
-                </div>
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
-                        <span class="text-sm text-slate-500">Mức độ</span>
-                        <span class="text-sm font-semibold px-3 py-1 rounded-full"
-                              th:classappend="${aiResult.severity == 'EMERGENCY'} ? 'badge-emergency' : (${aiResult.severity == 'MEDIUM'} ? 'badge-medium' : 'badge-normal')"
-                              th:text="${aiResult.severity}">NORMAL</span>
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+
+                <!-- Priority Level Header -->
+                <div class="px-5 py-4"
+                     th:style="${aiResult.priority == 'M1'} ? 'background: linear-gradient(135deg,#ef4444,#dc2626)' :
+                               (${aiResult.priority == 'M2'} ? 'background: linear-gradient(135deg,#f97316,#ea580c)' :
+                               (${aiResult.priority == 'M3'} ? 'background: linear-gradient(135deg,#eab308,#ca8a04)' :
+                               (${aiResult.priority == 'M4'} ? 'background: linear-gradient(135deg,#22c55e,#16a34a)' :
+                               'background: linear-gradient(135deg,#64748b,#475569)')))"
+                >
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="shield-alert" class="w-5 h-5 text-white"></i>
+                            <span class="text-white font-bold text-sm">KẾT QUẢ PHÂN LOẠI AI</span>
+                        </div>
+                        <span class="text-white/80 text-xs font-medium"
+                              th:text="${aiResult.confidence != null} ? 'Độ tin cậy: ' + ${aiResult.confidence} + '%' : ''"></span>
                     </div>
-                    <div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
-                        <span class="text-sm text-slate-500">Gợi ý khoa</span>
-                        <span class="text-sm font-semibold text-primary" th:text="${aiResult.department}">Khoa Tim Mạch</span>
-                    </div>
-                    <div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
-                        <span class="text-sm text-slate-500">Độ phù hợp</span>
-                        <span class="text-sm font-semibold text-emerald-600" th:text="${aiResult.confidence + '%'}">89%</span>
-                    </div>
-                    <!-- Chỉ dẫn đường đi -->
-                    <div th:if="${aiResult.locationGuide}" class="bg-blue-50 rounded-xl px-4 py-3 mt-2">
-                        <div class="flex items-start gap-2">
-                            <i data-lucide="map-pin" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
-                            <div>
-                                <p class="text-xs font-semibold text-primary" th:text="${aiResult.departmentFull}">Khoa Tim Mạch — Tòa B, Tầng 3</p>
-                                <p class="text-xs text-slate-600 mt-0.5" th:text="${aiResult.locationGuide}">Từ sảnh chính Tòa A...</p>
-                            </div>
+
+                    <!-- Big Priority Badge -->
+                    <div class="mt-3 flex items-center gap-3">
+                        <div class="text-4xl font-black text-white" th:text="${aiResult.priority ?: 'M3'}">M3</div>
+                        <div>
+                            <div class="text-white font-bold text-lg"
+                                 th:text="${aiResult.priority == 'M1'} ? 'CẤP CỨU NGAY' :
+                                          (${aiResult.priority == 'M2'} ? 'KHẨN CẤP' :
+                                          (${aiResult.priority == 'M3'} ? 'ƯU TIÊN' :
+                                          (${aiResult.priority == 'M4'} ? 'THÔNG THƯỜNG' : 'KHÔNG KHẨN')))">ƯU TIÊN</div>
+                            <div class="text-white/70 text-xs mt-0.5"
+                                 th:text="${aiResult.priority == 'M1'} ? 'Vào thẳng phòng cấp cứu ngay lập tức' :
+                                          (${aiResult.priority == 'M2'} ? 'Được ưu tiên khám trong 15 phút' :
+                                          (${aiResult.priority == 'M3'} ? 'Được ưu tiên, chờ khoảng 30 phút' :
+                                          (${aiResult.priority == 'M4'} ? 'Chờ khám theo thứ tự thông thường' : 'Có thể đặt lịch hẹn trước')))">Được ưu tiên, chờ khoảng 30 phút</div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Info rows -->
+                <div class="p-5 space-y-2.5">
+                    <div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-sm text-slate-500">Khoa khám</span>
+                        </div>
+                        <span class="text-sm font-semibold text-primary" th:text="${aiResult.department}">Khoa Nội tổng hợp</span>
+                    </div>
+
+                    <div th:if="${aiResult.departmentFull}" class="flex items-center justify-between bg-blue-50 rounded-xl px-4 py-3">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
+                            <div>
+                                <p class="text-xs font-semibold text-primary" th:text="${aiResult.departmentFull}">Khoa Nội tổng hợp · Phòng 101 · Tầng 1</p>
+                                <p class="text-xs text-slate-500 mt-0.5" th:text="${aiResult.locationGuide}">Từ sảnh chính rẽ phải, đi thẳng 20m</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- M1-M5 Scale visual -->
+                    <div class="bg-slate-50 rounded-xl px-4 py-3">
+                        <div class="text-xs text-slate-400 mb-2 font-medium">Thang phân loại</div>
+                        <div class="flex gap-1.5">
+                            <div th:each="level : ${ {'M1','M2','M3','M4','M5'} }"
+                                 class="flex-1 h-2 rounded-full"
+                                 th:style="${level == aiResult.priority} ?
+                                   (${level == 'M1'} ? 'background:#ef4444' :
+                                   (${level == 'M2'} ? 'background:#f97316' :
+                                   (${level == 'M3'} ? 'background:#eab308' :
+                                   (${level == 'M4'} ? 'background:#22c55e' : 'background:#64748b')))) :
+                                   'background:#e2e8f0'"></div>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-[10px] text-red-500 font-bold">M1</span>
+                            <span class="text-[10px] text-slate-300 font-medium">M5</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Action Buttons -->
-                <div class="flex gap-3 mt-4">
+                <div class="flex gap-3 px-5 pb-5">
                     <form th:action="@{/tickets}" method="post" class="flex-1">
                         <input type="hidden" name="departmentId" th:value="${aiResult.departmentId}">
+                        <input type="hidden" name="priority" th:value="${aiResult.priority}">
                         <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-semibold rounded-xl hover:shadow-lg transition-all">
-                            ✅ Xác nhận đăng ký
+                            ✅ Xác nhận · Nhận phiếu khám
                         </button>
                     </form>
                     <button onclick="document.getElementById('chatInput').focus()" class="px-4 py-2.5 border border-slate-200 text-sm font-medium text-slate-600 rounded-xl hover:bg-slate-50 transition-all">
@@ -95,13 +142,19 @@
             </div>
         </div>
 
-        <!-- FAQ Suggestions -->
+        <!-- Quick Symptom & FAQ Suggestions -->
         <div class="flex flex-wrap gap-2 justify-center mb-3">
-            <button onclick="sendQuickMessage(this.innerText)" class="px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs text-slate-600 hover:border-primary hover:text-primary transition-all">
-                🕐 Giờ làm việc?
+            <button onclick="sendQuickMessage(this.innerText)" class="px-3 py-1.5 bg-red-50 border border-red-200 rounded-full text-xs text-red-600 hover:bg-red-100 transition-all font-medium">
+                🌡️ Sốt cao trên 39 độ
+            </button>
+            <button onclick="sendQuickMessage(this.innerText)" class="px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-full text-xs text-orange-600 hover:bg-orange-100 transition-all font-medium">
+                🤕 Đau đầu chóng mặt
+            </button>
+            <button onclick="sendQuickMessage(this.innerText)" class="px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-full text-xs text-yellow-600 hover:bg-yellow-100 transition-all font-medium">
+                🫁 Khó thở tức ngực
             </button>
             <button onclick="sendQuickMessage(this.innerText)" class="px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs text-slate-600 hover:border-primary hover:text-primary transition-all">
-                📋 Cần mang giấy tờ gì?
+                🕐 Giờ làm việc?
             </button>
             <button onclick="sendQuickMessage(this.innerText)" class="px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs text-slate-600 hover:border-primary hover:text-primary transition-all">
                 💰 Chi phí khám?
@@ -111,6 +164,9 @@
         <!-- Input Area -->
         <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-3 mb-4">
             <form id="chatForm" th:action="@{/chat/send}" method="post" enctype="multipart/form-data" class="flex items-center gap-2">
+                <!-- Session ID -->
+                <input type="hidden" id="sessionId" name="sessionId" th:value="${sessionId}">
+
                 <!-- Upload ảnh BHYT -->
                 <label class="p-2.5 hover:bg-slate-100 rounded-xl cursor-pointer transition-all" title="Gửi ảnh thẻ BHYT">
                     <i data-lucide="image-plus" class="w-5 h-5 text-slate-400"></i>
@@ -139,9 +195,216 @@
         const chatBox = document.getElementById('chatMessages');
         if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        function appendUserBubble(text) {
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const div = document.createElement('div');
+            div.className = 'flex justify-end';
+            div.innerHTML = `
+                <div class="chat-bubble-user px-4 py-3 max-w-lg">
+                    <p class="text-sm whitespace-pre-line">${escapeHtml(text)}</p>
+                    <span class="text-[10px] block mt-1 opacity-60">${time}</span>
+                </div>
+            `;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function appendBotBubble(text) {
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const div = document.createElement('div');
+            div.className = 'flex items-start gap-3 max-w-[85%]';
+            div.innerHTML = `
+                <div class="w-9 h-9 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                    <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                </div>
+                <div class="chat-bubble-bot px-4 py-3 max-w-lg">
+                    <p class="text-sm text-slate-700 whitespace-pre-line">${escapeHtml(text)}</p>
+                    <span class="text-[10px] text-slate-400 block mt-2">${time}</span>
+                </div>
+            `;
+            chatBox.appendChild(div);
+            lucide.createIcons({root: div});
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function getPriorityColor(priority) {
+            if (priority === 'M1') return 'linear-gradient(135deg,#ef4444,#dc2626)';
+            if (priority === 'M2') return 'linear-gradient(135deg,#f97316,#ea580c)';
+            if (priority === 'M3') return 'linear-gradient(135deg,#eab308,#ca8a04)';
+            if (priority === 'M4') return 'linear-gradient(135deg,#22c55e,#16a34a)';
+            return 'linear-gradient(135deg,#64748b,#475569)';
+        }
+
+        function getPriorityLabel(priority) {
+            if (priority === 'M1') return 'CẤP CỨU NGAY';
+            if (priority === 'M2') return 'KHẨN CẤP';
+            if (priority === 'M3') return 'ƯU TIÊN';
+            if (priority === 'M4') return 'THÔNG THƯỜNG';
+            return 'KHÔNG KHẨN';
+        }
+
+        function getPriorityDesc(priority) {
+            if (priority === 'M1') return 'Vào thẳng phòng cấp cứu ngay lập tức';
+            if (priority === 'M2') return 'Được ưu tiên khám trong 15 phút';
+            if (priority === 'M3') return 'Được ưu tiên, chờ khoảng 30 phút';
+            if (priority === 'M4') return 'Chờ khám theo thứ tự thông thường';
+            return 'Có thể đặt lịch hẹn trước';
+        }
+
+        function getPriorityLevelColor(level, priority) {
+            if (level !== priority) return 'background:#e2e8f0';
+            if (level === 'M1') return 'background:#ef4444';
+            if (level === 'M2') return 'background:#f97316';
+            if (level === 'M3') return 'background:#eab308';
+            if (level === 'M4') return 'background:#22c55e';
+            return 'background:#64748b';
+        }
+
+        function appendTriageCard(triage) {
+            const div = document.createElement('div');
+            div.className = 'mx-auto w-full max-w-lg mb-4 mt-4';
+            
+            const deptFullHtml = triage.departmentFull ? `
+                    <div class="flex items-center justify-between bg-blue-50 rounded-xl px-4 py-3">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
+                            <div>
+                                <p class="text-xs font-semibold text-primary">${escapeHtml(triage.departmentFull)}</p>
+                                <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(triage.locationGuide || '')}</p>
+                            </div>
+                        </div>
+                    </div>` : '';
+
+            const confidenceHtml = triage.confidence ? `<span class="text-white/80 text-xs font-medium">Độ tin cậy: ${triage.confidence}%</span>` : '';
+
+            // Generate scale bars
+            const levels = ['M1','M2','M3','M4','M5'];
+            let scaleHtml = '';
+            for (const lvl of levels) {
+                scaleHtml += `<div class="flex-1 h-2 rounded-full" style="${getPriorityLevelColor(lvl, triage.priority)}"></div>`;
+            }
+
+            const sessId = document.getElementById('sessionId').value;
+
+            div.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+                <div class="px-5 py-4" style="${getPriorityColor(triage.priority)}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="shield-alert" class="w-5 h-5 text-white"></i>
+                            <span class="text-white font-bold text-sm">KẾT QUẢ PHÂN LOẠI AI</span>
+                        </div>
+                        ${confidenceHtml}
+                    </div>
+                    <div class="mt-3 flex items-center gap-3">
+                        <div class="text-4xl font-black text-white">${triage.priority || 'M3'}</div>
+                        <div>
+                            <div class="text-white font-bold text-lg">${getPriorityLabel(triage.priority)}</div>
+                            <div class="text-white/70 text-xs mt-0.5">${getPriorityDesc(triage.priority)}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-5 space-y-2.5">
+                    <div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-sm text-slate-500">Khoa khám</span>
+                        </div>
+                        <span class="text-sm font-semibold text-primary">${escapeHtml(triage.departmentName || '')}</span>
+                    </div>
+                    ${deptFullHtml}
+                    <div class="bg-slate-50 rounded-xl px-4 py-3">
+                        <div class="text-xs text-slate-400 mb-2 font-medium">Thang phân loại</div>
+                        <div class="flex gap-1.5">${scaleHtml}</div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-[10px] text-red-500 font-bold">M1</span>
+                            <span class="text-[10px] text-slate-300 font-medium">M5</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-3 px-5 pb-5">
+                    <form action="/chat/confirm" method="post" class="flex-1">
+                        <input type="hidden" name="sessionId" value="${sessId}">
+                        <input type="hidden" name="departmentId" value="${triage.departmentId || ''}">
+                        <input type="hidden" name="priority" value="${triage.priority || 'M3'}">
+                        <input type="hidden" name="aiSummary" value="${escapeHtml(triage.summary || '')}">
+                        <input type="hidden" name="confidence" value="${triage.confidence || 0}">
+                        <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-semibold rounded-xl hover:shadow-lg transition-all">
+                            ✅ Xác nhận · Nhận phiếu khám
+                        </button>
+                    </form>
+                    <button type="button" onclick="document.getElementById('chatInput').focus()" class="px-4 py-2.5 border border-slate-200 text-sm font-medium text-slate-600 rounded-xl hover:bg-slate-50 transition-all">
+                        🔄 Đổi khoa
+                    </button>
+                </div>
+            </div>`;
+            chatBox.appendChild(div);
+            lucide.createIcons({root: div});
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        const chatForm = document.getElementById('chatForm');
+        if (chatForm) {
+            chatForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const input = document.getElementById('chatInput');
+                const text = input.value.trim();
+                if (!text) return;
+
+                const sessId = document.getElementById('sessionId').value;
+                appendUserBubble(text);
+                input.value = '';
+
+                try {
+                    const formData = new URLSearchParams();
+                    formData.append('sessionId', sessId);
+                    formData.append('message', text);
+
+                    const res = await fetch('/chat/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: formData
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        
+                        // Parse Bot Message content
+                        let botText = 'Đã ghi nhận triệu chứng của bạn.';
+                        if (data.message && data.message.content) {
+                            botText = data.message.content;
+                        } else if (data.content) { // Fallback if ChatMessage is returned directly
+                            botText = data.content;
+                        } else if (data.reply) { // Fallback if ChatSendResult structure changes
+                            botText = data.reply;
+                        }
+                        
+                        appendBotBubble(botText);
+                        
+                        // Render Triage Card if AI returned a definitive triage result
+                        if (data.triage) {
+                            appendTriageCard(data.triage);
+                        }
+                    } else {
+                        appendBotBubble('Xin lỗi, không thể kết nối tới trợ lý AI. Vui lòng thử lại sau.');
+                    }
+                } catch (err) {
+                    appendBotBubble('Đã có lỗi xảy ra khi gửi tin nhắn.');
+                }
+            });
+        }
+
         function sendQuickMessage(text) {
-            document.getElementById('chatInput').value = text;
-            document.getElementById('chatForm').submit();
+            const input = document.getElementById('chatInput');
+            if (input) {
+                input.value = text;
+                chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
         }
     </script>
 </body>

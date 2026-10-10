@@ -27,9 +27,9 @@
             <p class="text-sm text-slate-500 mb-6">Sử dụng Mã BHYT và mật khẩu để truy cập</p>
 
             <!-- Error message -->
-            <div th:if="${error}" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+            <div th:if="${param.error}" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
                 <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 flex-shrink-0"></i>
-                <span class="text-sm text-red-600" th:text="${error}">Sai tài khoản hoặc mật khẩu</span>
+                <span class="text-sm text-red-600">Sai tài khoản hoặc mật khẩu</span>
             </div>
 
             <!-- Form -->

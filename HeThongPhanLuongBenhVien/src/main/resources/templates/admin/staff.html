@@ -67,7 +67,7 @@
                                       th:classappend="${s.role == 'DOCTOR'} ? 'bg-primary/10 text-primary' : 'bg-emerald-50 text-emerald-600'"
                                       th:text="${s.role == 'DOCTOR'} ? 'Bác sĩ' : 'Y tá'">Bác sĩ</span>
                             </td>
-                            <td class="px-6 py-4 text-slate-600 text-xs" th:text="${s.departmentName}">Khoa Cấp Cứu</td>
+                            <td class="px-6 py-4 text-slate-600 text-xs" th:text="${s.department?.name ?: 'Chưa có khoa'}">Khoa Cấp Cứu</td>
                             <td class="px-6 py-4 text-slate-500 text-xs" th:text="${s.phone}">0911111111</td>
                             <td class="px-6 py-4 text-center">
                                 <span class="text-xs font-semibold px-3 py-1 rounded-full"

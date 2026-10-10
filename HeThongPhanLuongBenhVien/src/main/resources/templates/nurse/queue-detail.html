@@ -44,14 +44,16 @@
                             <th class="px-6 py-4">STT</th>
                             <th class="px-6 py-4">Bệnh nhân</th>
                             <th class="px-6 py-4">Mã BHYT</th>
-                            <th class="px-6 py-4 text-center">Khẩn cấp</th>
+                            <th class="px-6 py-4 text-center">Ưu tiên</th>
                             <th class="px-6 py-4 text-center">Trạng thái</th>
                             <th class="px-6 py-4">Thời gian</th>
                             <th class="px-6 py-4 text-center">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr th:each="t : ${tickets}" class="border-t border-slate-50 hover:bg-slate-50/50 transition-all">
+                        <tr th:each="t : ${tickets}"
+                            class="border-t border-slate-50 hover:bg-slate-50/50 transition-all"
+                            th:classappend="${t.priority.name() == 'M1'} ? 'bg-red-50/30' : ''">
                             <td class="px-6 py-4">
                                 <span class="text-lg font-extrabold text-slate-800" th:text="${t.ticketNumber}">001</span>
                             </td>
@@ -60,32 +62,42 @@
                             </td>
                             <td class="px-6 py-4 text-slate-500 font-mono text-xs" th:text="${t.bhytNumber}">HN479000001</td>
                             <td class="px-6 py-4 text-center">
-                                <span class="text-xs font-semibold px-3 py-1 rounded-full"
-                                      th:classappend="${t.severity == 'EMERGENCY'} ? 'badge-emergency' : (${t.severity == 'MEDIUM'} ? 'badge-medium' : 'badge-normal')"
-                                      th:text="${t.severity}">NORMAL</span>
+                                <!-- M1-M5 Priority Badge -->
+                                <span class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full border"
+                                      th:style="${t.priority.name() == 'M1'} ? 'background:rgba(239,68,68,.12);color:#dc2626;border-color:rgba(239,68,68,.3)' :
+                                               (${t.priority.name() == 'M2'} ? 'background:rgba(249,115,22,.12);color:#ea580c;border-color:rgba(249,115,22,.3)' :
+                                               (${t.priority.name() == 'M3'} ? 'background:rgba(234,179,8,.12);color:#ca8a04;border-color:rgba(234,179,8,.3)' :
+                                               (${t.priority.name() == 'M4'} ? 'background:rgba(34,197,94,.12);color:#16a34a;border-color:rgba(34,197,94,.3)' :
+                                               'background:rgba(148,163,184,.1);color:#64748b;border-color:rgba(148,163,184,.3)')))"
+                                      th:text="${t.priority.name() == 'M1'} ? '🔴 M1 Cấp cứu' :
+                                               (${t.priority.name() == 'M2'} ? '🟠 M2 Khẩn cấp' :
+                                               (${t.priority.name() == 'M3'} ? '🟡 M3 Ưu tiên' :
+                                               (${t.priority.name() == 'M4'} ? '🟢 M4 Thường' : '⚪ M5')))">🟡 M3 Ưu tiên</span>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <span class="text-xs font-semibold px-3 py-1 rounded-full"
-                                      th:classappend="${t.status == 'WAITING'} ? 'status-waiting' : (${t.status == 'CALLED'} ? 'status-called' : 'status-done')"
-                                      th:text="${t.status == 'WAITING'} ? 'Chờ khám' : (${t.status == 'CALLED'} ? 'Đang khám' : 'Hoàn tất')">Chờ khám</span>
+                                      th:classappend="${t.status.name() == 'WAITING'} ? 'status-waiting' : (${t.status.name() == 'CALLED'} ? 'status-called' : 'status-done')"
+                                      th:text="${t.status.name() == 'WAITING'} ? 'Chờ khám' : (${t.status.name() == 'CALLED'} ? 'Đang khám' : 'Hoàn tất')">Chờ khám</span>
                             </td>
                             <td class="px-6 py-4 text-slate-500 text-xs" th:text="${#temporals.format(t.createdAt, 'HH:mm')}">09:30</td>
                             <td class="px-6 py-4 text-center">
                                 <div class="flex items-center justify-center gap-2">
                                     <!-- Gọi số -->
-                                    <form th:if="${t.status == 'WAITING'}" th:action="@{/nurse/queue/{id}/call(id=${t.id})}" method="post">
+                                    <form th:if="${t.status.name() == 'WAITING'}" th:action="@{/nurse/queue/{id}/call(id=${t.id})}" method="post">
+                                        <input type="hidden" name="deptId" th:value="${department.id}">
                                         <button type="submit" class="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all" title="Gọi bệnh nhân">
                                             <i data-lucide="phone-call" class="w-4 h-4"></i>
                                         </button>
                                     </form>
                                     <!-- Chuyển khoa -->
-                                    <button th:if="${t.status == 'WAITING' or t.status == 'CALLED'}" onclick="openTransfer(this)"
+                                    <button th:if="${t.status.name() == 'WAITING' or t.status.name() == 'CALLED'}" onclick="openTransfer(this)"
                                             th:data-ticket-id="${t.id}" th:data-patient-name="${t.patientName}"
                                             class="p-2 bg-orange-50 text-orange-500 rounded-lg hover:bg-orange-100 transition-all" title="Chuyển khoa">
                                         <i data-lucide="arrow-right-left" class="w-4 h-4"></i>
                                     </button>
                                     <!-- Hoàn tất -->
-                                    <form th:if="${t.status == 'CALLED'}" th:action="@{/nurse/queue/{id}/done(id=${t.id})}" method="post">
+                                    <form th:if="${t.status.name() == 'CALLED'}" th:action="@{/nurse/queue/{id}/done(id=${t.id})}" method="post">
+                                        <input type="hidden" name="deptId" th:value="${department.id}">
                                         <button type="submit" class="p-2 bg-emerald-50 text-emerald-500 rounded-lg hover:bg-emerald-100 transition-all" title="Hoàn tất khám">
                                             <i data-lucide="check-circle" class="w-4 h-4"></i>
                                         </button>

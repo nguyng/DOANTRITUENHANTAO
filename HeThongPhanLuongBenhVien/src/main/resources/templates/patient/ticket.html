@@ -32,21 +32,52 @@
 
             <!-- Ticket Card -->
             <div class="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden max-w-md mx-auto">
-                <!-- Header gradient -->
-                <div class="bg-gradient-to-r from-primary to-primary-dark px-6 py-5 text-center">
+
+                <!-- Priority Header (màu theo mức ưu tiên) -->
+                <div class="px-6 py-5 text-center text-white"
+                     th:style="${ticket.priority.name() == 'M1'} ? 'background: linear-gradient(135deg,#ef4444,#dc2626)' :
+                              (${ticket.priority.name() == 'M2'} ? 'background: linear-gradient(135deg,#f97316,#ea580c)' :
+                              (${ticket.priority.name() == 'M3'} ? 'background: linear-gradient(135deg,#eab308,#ca8a04)' :
+                              (${ticket.priority.name() == 'M4'} ? 'background: linear-gradient(135deg,#22c55e,#16a34a)' :
+                              'background: linear-gradient(135deg,#64748b,#475569)')))"
+                >
                     <p class="text-white/70 text-xs font-medium uppercase tracking-wider">Số thứ tự</p>
                     <p class="text-7xl font-extrabold text-white mt-1" th:text="${ticket.ticketNumber}">007</p>
+
+                    <!-- M1-M5 Badge -->
+                    <div class="inline-flex items-center gap-2 mt-3 px-4 py-1.5 bg-white/20 rounded-full">
+                        <span class="text-sm font-black" th:text="${ticket.priority ?: 'M3'}">M3</span>
+                        <span class="text-sm font-semibold"
+                              th:text="${ticket.priority.name() == 'M1'} ? '— CẤP CỨU NGAY' :
+                                       (${ticket.priority.name() == 'M2'} ? '— KHẨN CẤP' :
+                                       (${ticket.priority.name() == 'M3'} ? '— ƯU TIÊN' :
+                                       (${ticket.priority.name() == 'M4'} ? '— THÔNG THƯỜNG' : '— KHÔNG KHẨN')))"> — ƯU TIÊN</span>
+                    </div>
                 </div>
 
                 <!-- Info -->
                 <div class="p-6 space-y-4">
+
+                    <!-- Vị trí trong hàng đợi -->
+                    <div th:if="${queuePosition != null}"
+                         class="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-center">
+                        <p class="text-xs text-blue-500 font-medium mb-1">Vị trí hiện tại</p>
+                        <p class="text-2xl font-black text-blue-700">
+                            <span th:text="${queuePosition}">3</span>
+                            <span class="text-base font-normal text-blue-500"> lượt trước bạn</span>
+                        </p>
+                        <p th:if="${estimatedWaitMinutes != null}" class="text-xs text-blue-400 mt-1">
+                            ⛳ Dự kiến chờ <strong th:text="${estimatedWaitMinutes}">15</strong> phút
+                        </p>
+                    </div>
+
                     <!-- Khoa -->
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i>
                             <span class="text-sm text-slate-500">Khoa khám</span>
                         </div>
-                        <span class="text-sm font-semibold text-slate-800" th:text="${ticket.departmentName}">Khoa Tim Mạch</span>
+                        <span class="text-sm font-semibold text-slate-800" th:text="${ticket.department != null ? ticket.department.name : (ticket.departmentName ?: '')}">Khoa Tim Mạch</span>
                     </div>
 
                     <!-- Trạng thái -->
@@ -56,21 +87,10 @@
                             <span class="text-sm text-slate-500">Trạng thái</span>
                         </div>
                         <span class="text-xs font-semibold px-3 py-1 rounded-full"
-                              th:classappend="${ticket.status == 'WAITING'} ? 'status-waiting' : (${ticket.status == 'CALLED'} ? 'status-called pulse-call' : 'status-done')"
-                              th:text="${ticket.status == 'WAITING'} ? 'Đang chờ' : (${ticket.status == 'CALLED'} ? '📢 Đến lượt bạn!' : 'Hoàn tất')">
+                              th:classappend="${ticket.status.name() == 'WAITING'} ? 'status-waiting' : (${ticket.status.name() == 'CALLED'} ? 'status-called pulse-call' : 'status-done')"
+                              th:text="${ticket.status.name() == 'WAITING'} ? 'Đang chờ' : (${ticket.status.name() == 'CALLED'} ? '📢 Đến lượt bạn!' : 'Hoàn tất')">
                             Đang chờ
                         </span>
-                    </div>
-
-                    <!-- Mức khẩn cấp -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="alert-triangle" class="w-4 h-4 text-slate-400"></i>
-                            <span class="text-sm text-slate-500">Mức khẩn cấp</span>
-                        </div>
-                        <span class="text-xs font-semibold px-3 py-1 rounded-full"
-                              th:classappend="${ticket.severity == 'EMERGENCY'} ? 'badge-emergency' : (${ticket.severity == 'MEDIUM'} ? 'badge-medium' : 'badge-normal')"
-                              th:text="${ticket.severity}">NORMAL</span>
                     </div>
 
                     <!-- Thời gian -->
@@ -83,7 +103,7 @@
                     </div>
 
                     <!-- Chỉ dẫn đường đi -->
-                    <div th:if="${ticket.locationGuide}" class="bg-blue-50 rounded-xl p-4 mt-2">
+                    <div th:if="${ticket.locationGuide}" class="bg-blue-50 rounded-xl p-4">
                         <div class="flex items-start gap-2">
                             <i data-lucide="navigation" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
                             <div>
@@ -92,10 +112,23 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- QR Code (dùng Google Charts API) -->
+                    <div class="flex flex-col items-center pt-2 pb-1">
+                        <p class="text-xs text-slate-400 font-medium mb-3 uppercase tracking-wider">Quét mã QR để kiểm tra phiếu</p>
+                        <img
+                            th:src="'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + ${ticket.ticketNumber} + '-' + ${ticket.departmentName} + '-' + ${ticket.id}"
+                            alt="QR Code phiếu khám"
+                            class="rounded-2xl border border-slate-100 shadow-sm"
+                            width="140" height="140"
+                        />
+                        <p class="text-xs text-slate-300 mt-2" th:text="${ticket.ticketNumber}">007</p>
+                    </div>
+
                 </div>
 
                 <!-- Actions -->
-                <div class="px-6 pb-6" th:if="${ticket.status == 'WAITING'}">
+                <div class="px-6 pb-6" th:if="${ticket.status.name() == 'WAITING'}">
                     <form th:action="@{/tickets/{id}/cancel(id=${ticket.id})}" method="post">
                         <button type="submit" onclick="return confirm('Bạn chắc chắn muốn hủy phiếu khám?')"
                                 class="w-full py-2.5 border-2 border-red-200 text-red-500 font-semibold rounded-xl hover:bg-red-50 transition-all text-sm">

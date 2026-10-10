@@ -19,6 +19,8 @@ CREATE TABLE DEPARTMENTS (
     floor INT,
     room_numbers VARCHAR(50),
     location_guide TEXT,
+    ticket_prefix VARCHAR(10) DEFAULT 'NB', -- Tiền tố tạo số thứ tự (VD: TM, CC)
+    avg_consult_minutes INT DEFAULT 15,     -- Thời gian khám TB để tính thời gian chờ
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -28,10 +30,11 @@ CREATE TABLE DEPARTMENTS (
 -- ==========================================
 CREATE TABLE USERS (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    bhyt_number VARCHAR(15) UNIQUE, -- Username đăng nhập
+    phone VARCHAR(15) UNIQUE,       -- Dùng làm Username đăng nhập (phổ biến nhất)
+    cccd VARCHAR(20) UNIQUE,        -- Căn cước công dân (Định danh bắt buộc)
+    bhyt_number VARCHAR(15) UNIQUE, -- Số thẻ BHYT (Có thể Null nếu khám dịch vụ)
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100) NOT NULL,
-    phone VARCHAR(15),
     email VARCHAR(100),
     dob DATE,
     gender VARCHAR(10),
@@ -59,9 +62,15 @@ CREATE TABLE QUEUE_TICKETS (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     patient_id UUID NOT NULL REFERENCES USERS(id),
     department_id UUID NOT NULL REFERENCES DEPARTMENTS(id),
-    ticket_number INT NOT NULL,
+    ticket_number VARCHAR(20) NOT NULL,
     status VARCHAR(20) DEFAULT 'WAITING' CHECK (status IN ('WAITING', 'CALLED', 'DONE', 'CANCELLED', 'TRANSFERRED')),
-    severity VARCHAR(20) DEFAULT 'NORMAL' CHECK (severity IN ('NORMAL', 'MEDIUM', 'EMERGENCY')),
+    priority VARCHAR(5) DEFAULT 'M3' CHECK (priority IN ('M1', 'M2', 'M3', 'M4', 'M5')),
+    ai_confidence INT,
+    ai_summary TEXT,
+    location_guide TEXT,
+    called_by_nurse_id UUID REFERENCES USERS(id),
+    transferred_to_dept_id UUID REFERENCES DEPARTMENTS(id),
+    transfer_reason TEXT,
     called_at TIMESTAMP,
     done_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -140,6 +149,7 @@ CREATE TABLE PRESCRIPTIONS (
 CREATE TABLE CHAT_SESSIONS (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES USERS(id),
+    ticket_id UUID REFERENCES QUEUE_TICKETS(id),
     started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ended_at TIMESTAMP
 );
@@ -169,6 +179,25 @@ CREATE TABLE AI_ANALYSIS_LOGS (
 );
 
 
+-- ==========================================
+-- 8. BẢNG FAQS (Câu hỏi thường gặp)
+-- ==========================================
+CREATE TABLE FAQS (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    keywords TEXT,
+    category VARCHAR(30),
+    department_id UUID REFERENCES DEPARTMENTS(id),
+    sort_order INT DEFAULT 0,
+    show_as_quick_reply BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    hit_count BIGINT DEFAULT 0,
+    created_by UUID REFERENCES USERS(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
 -- ==============================================================================
 -- DATA SEEDING (DỮ LIỆU MẪU)
 -- ==============================================================================
@@ -187,62 +216,62 @@ INSERT INTO DEPARTMENTS (id, name, code, description, building, floor, room_numb
 ('daaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Khoa Da Liễu', 'KDALIEU', 'Khám các bệnh về da, dị ứng', 'Tòa nhà C', 2, '201-205', 'Tòa nhà C, tầng 2, phía trên Khoa Nhi.'),
 ('dbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Khoa Xương Khớp', 'KXUONGKHOP', 'Khám cơ xương khớp, gout', 'Tòa nhà B', 4, '401-408', 'Từ Tòa B, lên tầng 4 bằng thang máy số 3, đối diện phòng siêu âm khớp.');
 
--- 2. Insert Tài khoản Nhân viên (Mật khẩu mặc định: Admin@123 => bcrypt format: $2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e)
+-- 2. Insert Tài khoản Nhân viên (Mật khẩu mặc định: Admin@123 => bcrypt format: $2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay)
 INSERT INTO USERS (id, bhyt_number, password_hash, full_name, role, department_id, email, phone) VALUES
-(uuid_generate_v4(), 'ADMIN_001', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Super Admin', 'ADMIN', NULL, 'admin@medassist.vn', '0901234567'),
+(uuid_generate_v4(), 'ADMIN_001', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Super Admin', 'ADMIN', NULL, 'admin@medassist.vn', '0901234567'),
 
 -- Khoa Cấp Cứu
-(uuid_generate_v4(), 'BS_MINH', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Nguyễn Nhật Minh', 'DOCTOR', 'd1111111-1111-1111-1111-111111111111', 'bs.minh@medassist.vn', '0911111111'),
-(uuid_generate_v4(), 'YTA_NGA', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Lê Thu Nga', 'NURSE', 'd1111111-1111-1111-1111-111111111111', 'yta.nga@medassist.vn', '0922222222'),
+(uuid_generate_v4(), 'BS_MINH', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Nguyễn Nhật Minh', 'DOCTOR', 'd1111111-1111-1111-1111-111111111111', 'bs.minh@medassist.vn', '0911111111'),
+(uuid_generate_v4(), 'YTA_NGA', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Lê Thu Nga', 'NURSE', 'd1111111-1111-1111-1111-111111111111', 'yta.nga@medassist.vn', '0922222222'),
 
 -- Khoa Sản - Phụ Khoa
-(uuid_generate_v4(), 'BS_SAN', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Trần Thị Hạnh', 'DOCTOR', 'd2222222-2222-2222-2222-222222222222', 'bs.hanh@medassist.vn', '0933333333'),
-(uuid_generate_v4(), 'YTA_SAN', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Nguyễn Mai', 'NURSE', 'd2222222-2222-2222-2222-222222222222', 'yta.mai@medassist.vn', '0944444444'),
+(uuid_generate_v4(), 'BS_SAN', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Trần Thị Hạnh', 'DOCTOR', 'd2222222-2222-2222-2222-222222222222', 'bs.hanh@medassist.vn', '0933333333'),
+(uuid_generate_v4(), 'YTA_SAN', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Nguyễn Mai', 'NURSE', 'd2222222-2222-2222-2222-222222222222', 'yta.mai@medassist.vn', '0944444444'),
 
 -- Khoa Tim Mạch
-(uuid_generate_v4(), 'BS_TIMMACH', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Lê Trọng Tài', 'DOCTOR', 'd3333333-3333-3333-3333-333333333333', 'bs.tai@medassist.vn', '0955555555'),
-(uuid_generate_v4(), 'YTA_TIMMACH', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Phan Hồng', 'NURSE', 'd3333333-3333-3333-3333-333333333333', 'yta.hong@medassist.vn', '0966666666'),
+(uuid_generate_v4(), 'BS_TIMMACH', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Lê Trọng Tài', 'DOCTOR', 'd3333333-3333-3333-3333-333333333333', 'bs.tai@medassist.vn', '0955555555'),
+(uuid_generate_v4(), 'YTA_TIMMACH', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Phan Hồng', 'NURSE', 'd3333333-3333-3333-3333-333333333333', 'yta.hong@medassist.vn', '0966666666'),
 
 -- Khoa Tai Mũi Họng
-(uuid_generate_v4(), 'BS_TMH', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Đinh Văn Sang', 'DOCTOR', 'd4444444-4444-4444-4444-444444444444', 'bs.sang@medassist.vn', '0977777777'),
-(uuid_generate_v4(), 'YTA_TMH', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Vũ Thủy', 'NURSE', 'd4444444-4444-4444-4444-444444444444', 'yta.thuy@medassist.vn', '0988888888'),
+(uuid_generate_v4(), 'BS_TMH', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Đinh Văn Sang', 'DOCTOR', 'd4444444-4444-4444-4444-444444444444', 'bs.sang@medassist.vn', '0977777777'),
+(uuid_generate_v4(), 'YTA_TMH', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Vũ Thủy', 'NURSE', 'd4444444-4444-4444-4444-444444444444', 'yta.thuy@medassist.vn', '0988888888'),
 
 -- Khoa Nhi
-(uuid_generate_v4(), 'BS_NHI', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Hoàng Thanh Trúc', 'DOCTOR', 'd5555555-5555-5555-5555-555555555555', 'bs.truc@medassist.vn', '0999999999'),
-(uuid_generate_v4(), 'YTA_NHI', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Lâm Thảo', 'NURSE', 'd5555555-5555-5555-5555-555555555555', 'yta.thao@medassist.vn', '0910101010'),
+(uuid_generate_v4(), 'BS_NHI', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Hoàng Thanh Trúc', 'DOCTOR', 'd5555555-5555-5555-5555-555555555555', 'bs.truc@medassist.vn', '0999999999'),
+(uuid_generate_v4(), 'YTA_NHI', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Lâm Thảo', 'NURSE', 'd5555555-5555-5555-5555-555555555555', 'yta.thao@medassist.vn', '0910101010'),
 
 -- Khoa Thần Kinh
-(uuid_generate_v4(), 'BS_THANKINH', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Trịnh Gia Minh', 'DOCTOR', 'd6666666-6666-6666-6666-666666666666', 'bs.giaminh@medassist.vn', '0920202020'),
-(uuid_generate_v4(), 'YTA_THANKINH', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Cao An', 'NURSE', 'd6666666-6666-6666-6666-666666666666', 'yta.an@medassist.vn', '0930303030'),
+(uuid_generate_v4(), 'BS_THANKINH', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Trịnh Gia Minh', 'DOCTOR', 'd6666666-6666-6666-6666-666666666666', 'bs.giaminh@medassist.vn', '0920202020'),
+(uuid_generate_v4(), 'YTA_THANKINH', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Cao An', 'NURSE', 'd6666666-6666-6666-6666-666666666666', 'yta.an@medassist.vn', '0930303030'),
 
 -- Khoa Mắt
-(uuid_generate_v4(), 'BS_MAT', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Nguyễn Quang Nhãn', 'DOCTOR', 'd7777777-7777-7777-7777-777777777777', 'bs.nhan@medassist.vn', '0940404040'),
-(uuid_generate_v4(), 'YTA_MAT', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Lê Thu', 'NURSE', 'd7777777-7777-7777-7777-777777777777', 'yta.thu@medassist.vn', '0950505050'),
+(uuid_generate_v4(), 'BS_MAT', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Nguyễn Quang Nhãn', 'DOCTOR', 'd7777777-7777-7777-7777-777777777777', 'bs.nhan@medassist.vn', '0940404040'),
+(uuid_generate_v4(), 'YTA_MAT', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Lê Thu', 'NURSE', 'd7777777-7777-7777-7777-777777777777', 'yta.thu@medassist.vn', '0950505050'),
 
 -- Khoa Hô Hấp
-(uuid_generate_v4(), 'BS_HOHAP', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Phạm Tuấn', 'DOCTOR', 'd8888888-8888-8888-8888-888888888888', 'bs.tuan@medassist.vn', '0960606060'),
-(uuid_generate_v4(), 'YTA_HOHAP', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Đào Sen', 'NURSE', 'd8888888-8888-8888-8888-888888888888', 'yta.sen@medassist.vn', '0970707070'),
+(uuid_generate_v4(), 'BS_HOHAP', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Phạm Tuấn', 'DOCTOR', 'd8888888-8888-8888-8888-888888888888', 'bs.tuan@medassist.vn', '0960606060'),
+(uuid_generate_v4(), 'YTA_HOHAP', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Đào Sen', 'NURSE', 'd8888888-8888-8888-8888-888888888888', 'yta.sen@medassist.vn', '0970707070'),
 
 -- Khoa Tiêu Hoá
-(uuid_generate_v4(), 'BS_TIEUHOA', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Ngô Bích', 'DOCTOR', 'd9999999-9999-9999-9999-999999999999', 'bs.bich@medassist.vn', '0980808080'),
-(uuid_generate_v4(), 'YTA_TIEUHOA', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Trần Trà', 'NURSE', 'd9999999-9999-9999-9999-999999999999', 'yta.tra@medassist.vn', '0990909090'),
+(uuid_generate_v4(), 'BS_TIEUHOA', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Ngô Bích', 'DOCTOR', 'd9999999-9999-9999-9999-999999999999', 'bs.bich@medassist.vn', '0980808080'),
+(uuid_generate_v4(), 'YTA_TIEUHOA', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Trần Trà', 'NURSE', 'd9999999-9999-9999-9999-999999999999', 'yta.tra@medassist.vn', '0990909090'),
 
 -- Khoa Da Liễu
-(uuid_generate_v4(), 'BS_DALIEU', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Đinh Công', 'DOCTOR', 'daaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bs.cong@medassist.vn', '0901010101'),
-(uuid_generate_v4(), 'YTA_DALIEU', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Lý Linh', 'NURSE', 'daaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'yta.linh@medassist.vn', '0912121212'),
+(uuid_generate_v4(), 'BS_DALIEU', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Đinh Công', 'DOCTOR', 'daaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bs.cong@medassist.vn', '0901010101'),
+(uuid_generate_v4(), 'YTA_DALIEU', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Lý Linh', 'NURSE', 'daaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'yta.linh@medassist.vn', '0912121212'),
 
 -- Khoa Xương Khớp
-(uuid_generate_v4(), 'BS_XUONGKHOP', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'BS. Phan Mạnh', 'DOCTOR', 'dbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'bs.manh@medassist.vn', '0923232323'),
-(uuid_generate_v4(), 'YTA_XUONGKHOP', '$2a$10$R9h/cIPz0gi.URNNX3rubedAKEQ.3p4jKjN5m7a82y5F64mI2Fv6e', 'Y tá Ngô Trâm', 'NURSE', 'dbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'yta.tram@medassist.vn', '0934343434');
+(uuid_generate_v4(), 'BS_XUONGKHOP', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'BS. Phan Mạnh', 'DOCTOR', 'dbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'bs.manh@medassist.vn', '0923232323'),
+(uuid_generate_v4(), 'YTA_XUONGKHOP', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Y tá Ngô Trâm', 'NURSE', 'dbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'yta.tram@medassist.vn', '0934343434');
 
--- 3. Insert Bệnh nhân mẫu (Mật khẩu mặc định: 123456 => bcrypt format: $2a$10$E1b2vFh3O0r5sK3K1pQ.8.B/L6G7/C6m0O6O8rM1eB3jV1jD6q/qK)
+-- 3. Insert Bệnh nhân mẫu (Mật khẩu mặc định: 123456 => bcrypt format: $2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.)
 INSERT INTO USERS (id, bhyt_number, password_hash, full_name, role, dob, gender, bhyt_object_code, bhyt_object_name, bhyt_discount_rate, bhyt_expiry_date) VALUES
-(uuid_generate_v4(), 'HN47900000001', '$2a$10$E1b2vFh3O0r5sK3K1pQ.8.B/L6G7/C6m0O6O8rM1eB3jV1jD6q/qK', 'Nguyễn Văn Nghèo', 'PATIENT', '1985-05-15', 'Nam', 'HN', 'Hộ nghèo', 1.00, '2028-12-31'),
-(uuid_generate_v4(), 'CN37900000001', '$2a$10$E1b2vFh3O0r5sK3K1pQ.8.B/L6G7/C6m0O6O8rM1eB3jV1jD6q/qK', 'Phạm Thị Cận', 'PATIENT', '1990-08-20', 'Nữ', 'CN', 'Cận nghèo', 0.95, '2027-12-31'),
-(uuid_generate_v4(), 'TE17900000001', '$2a$10$E1b2vFh3O0r5sK3K1pQ.8.B/L6G7/C6m0O6O8rM1eB3jV1jD6q/qK', 'Trần Bé Nam', 'PATIENT', '2020-01-10', 'Nam', 'TE', 'Trẻ em dưới 6 tuổi', 1.00, '2028-06-30'),
-(uuid_generate_v4(), 'HS47900000001', '$2a$10$E1b2vFh3O0r5sK3K1pQ.8.B/L6G7/C6m0O6O8rM1eB3jV1jD6q/qK', 'Nguyễn Học Sinh', 'PATIENT', '2010-09-05', 'Nam', 'HS', 'Học sinh/Sinh viên', 0.80, '2025-08-31'),
-(uuid_generate_v4(), 'DN47900000001', '$2a$10$E1b2vFh3O0r5sK3K1pQ.8.B/L6G7/C6m0O6O8rM1eB3jV1jD6q/qK', 'Nguyễn Thị Lan', 'PATIENT', '1992-11-25', 'Nữ', 'DN', 'Người lao động', 0.80, '2026-12-31'),
-(uuid_generate_v4(), 'DN47900099001', '$2a$10$E1b2vFh3O0r5sK3K1pQ.8.B/L6G7/C6m0O6O8rM1eB3jV1jD6q/qK', 'Test Thẻ Hết Hạn', 'PATIENT', '1988-02-14', 'Nam', 'DN', 'Người lao động', 0.80, '2023-01-01');
+(uuid_generate_v4(), 'HN47900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Văn Nghèo', 'PATIENT', '1985-05-15', 'Nam', 'HN', 'Hộ nghèo', 1.00, '2028-12-31'),
+(uuid_generate_v4(), 'CN37900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Phạm Thị Cận', 'PATIENT', '1990-08-20', 'Nữ', 'CN', 'Cận nghèo', 0.95, '2027-12-31'),
+(uuid_generate_v4(), 'TE17900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Trần Bé Nam', 'PATIENT', '2020-01-10', 'Nam', 'TE', 'Trẻ em dưới 6 tuổi', 1.00, '2028-06-30'),
+(uuid_generate_v4(), 'HS47900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Học Sinh', 'PATIENT', '2010-09-05', 'Nam', 'HS', 'Học sinh/Sinh viên', 0.80, '2025-08-31'),
+(uuid_generate_v4(), 'DN47900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Thị Lan', 'PATIENT', '1992-11-25', 'Nữ', 'DN', 'Người lao động', 0.80, '2026-12-31'),
+(uuid_generate_v4(), 'DN47900099001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Test Thẻ Hết Hạn', 'PATIENT', '1988-02-14', 'Nam', 'DN', 'Người lao động', 0.80, '2023-01-01');
 
 -- 4. Insert Dịch vụ & Thuốc đa dạng hơn
 INSERT INTO MEDICAL_SERVICES (name, price, is_bhyt_covered, bhyt_price_limit) VALUES

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HMS - Hệ thống Quản lý Bệnh viện</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="./css/tokens.css?v=4">
+    <link rel="stylesheet" href="./css/base.css?v=4">
+    <link rel="stylesheet" href="./css/layout.css?v=4">
+    <link rel="stylesheet" href="./css/components.css?v=4">
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar Backdrop for mobile -->
+        <div class="sb-backdrop" id="sidebar-overlay" data-close></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sb-brand">
+                <div class="sb-logo">
+                    <i data-lucide="hospital"></i>
+                </div>
+                <div class="sb-brand-text">
+                    <div class="sb-brand-name">Medi<b>Core</b></div>
+                    <div class="sb-brand-sub">Hệ thống Quản lý Bệnh viện</div>
+                </div>
+                <button class="sb-collapse" id="sidebar-close-btn" aria-label="Thu gọn">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+            </div>
+            
+            <div class="sb-user">
+                <img src="https://i.pravatar.cc/150?u=admin" alt="Admin" style="width:36px;height:36px;border-radius:10px;">
+                <div class="sb-user-info">
+                    <div class="sb-user-name">Dr. Nguyễn Văn A</div>
+                    <div class="sb-user-role">Quản trị viên</div>
+                </div>
+            </div>
+            
+            <nav class="sb-nav">
+                <div class="sb-section">
+                    <div class="sb-label">Tổng quan</div>
+                    <a href="#/dashboard" class="sb-link active" data-route="dashboard">
+                        <i data-lucide="layout-dashboard"></i>
+                        <span class="sb-text">Dashboard</span>
+                    </a>
+                </div>
+
+                <div class="sb-section">
+                    <div class="sb-label">Khám bệnh & Phân luồng</div>
+                    <a href="#/triage" class="sb-link" data-route="triage">
+                        <i data-lucide="git-merge"></i>
+                        <span class="sb-text">AI Phân luồng</span>
+                        <span class="sb-badge live" style="margin-left: auto;">Mới</span>
+                    </a>
+                    <a href="#/queue" class="sb-link" data-route="queue">
+                        <i data-lucide="users"></i>
+                        <span class="sb-text">Hàng đợi</span>
+                    </a>
+                    <a href="#/appointments" class="sb-link" data-route="appointments">
+                        <i data-lucide="calendar"></i>
+                        <span class="sb-text">Lịch hẹn</span>
+                    </a>
+                </div>
+
+                <div class="sb-section">
+                    <div class="sb-label">Quản lý</div>
+                    <a href="#/patients" class="sb-link" data-route="patients">
+                        <i data-lucide="user-square-2"></i>
+                        <span class="sb-text">Bệnh nhân</span>
+                    </a>
+                    <a href="#/doctors" class="sb-link" data-route="doctors">
+                        <i data-lucide="stethoscope"></i>
+                        <span class="sb-text">Bác sĩ</span>
+                    </a>
+                    <a href="#/pharmacy" class="sb-link" data-route="pharmacy">
+                        <i data-lucide="pill"></i>
+                        <span class="sb-text">Kho thuốc</span>
+                    </a>
+                    <a href="#/labs" class="sb-link" data-route="labs">
+                        <i data-lucide="flask-conical"></i>
+                        <span class="sb-text">Xét nghiệm</span>
+                    </a>
+                </div>
+                
+                <div class="sb-section">
+                    <div class="sb-label">Hệ thống</div>
+                    <a href="#/settings" class="sb-link" data-route="settings">
+                        <i data-lucide="settings"></i>
+                        <span class="sb-text">Cài đặt</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <div class="sb-footer">
+                <button class="btn btn-outline" style="width: 100%; border-color: transparent;">
+                    <i data-lucide="log-out" style="width:16px;height:16px"></i>
+                    <span>Đăng xuất</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Topbar -->
+            <header class="topbar">
+                <button class="icon-btn tb-menu" id="sidebar-toggle-btn">
+                    <i data-lucide="menu"></i>
+                </button>
+                
+                <div class="tb-crumbs">
+                    <div class="breadcrumb">
+                        <i data-lucide="home"></i>
+                        <i data-lucide="chevron-right"></i>
+                        <span class="current" id="current-page-title">Dashboard</span>
+                    </div>
+                </div>
+
+                <div class="tb-search">
+                    <i data-lucide="search" style="width:16px;height:16px;color:var(--text-3)"></i>
+                    <span>Tìm kiếm (Ctrl+K)</span>
+                    <div class="kbd">Ctrl K</div>
+                </div>
+
+                <div class="tb-actions">
+                    <button class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện">
+                        <i data-lucide="moon" class="moon"></i>
+                        <i data-lucide="sun" class="sun"></i>
+                    </button>
+                    
+                    <div class="dropdown">
+                        <button class="icon-btn ring" data-dd-toggle>
+                            <i data-lucide="bell"></i>
+                            <span class="badge-dot"></span>
+                        </button>
+                        <div class="menu menu-right" style="width: 320px; margin-top: 8px;">
+                            <div class="menu-head">
+                                <div class="font-bold">Thông báo</div>
+                                <span class="badge" style="background:var(--primary-soft);color:var(--primary)">3 mới</span>
+                            </div>
+                            <div class="menu-body" style="padding:0">
+                                <a href="#" class="menu-item" style="padding: 12px 16px; align-items: flex-start;">
+                                    <div class="ichip sm" style="background:var(--tint-danger);color:var(--danger-500)">
+                                        <i data-lucide="activity"></i>
+                                    </div>
+                                    <div class="flex-1" style="min-width:0">
+                                        <div class="font-medium text-sm">Ca cấp cứu mới</div>
+                                        <div class="text-xs text-muted mt-1 truncate">Bệnh nhân Trần Thị B - Cần chú ý ngay</div>
+                                        <div class="text-xs text-muted mt-1">Vừa xong</div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="menu-foot text-center">
+                                <a href="#" class="text-primary text-sm font-medium">Xem tất cả</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tb-divider"></div>
+                    
+                    <button class="icon-btn tb-profile">
+                        <img src="https://i.pravatar.cc/150?u=admin" alt="" style="width:28px;height:28px;border-radius:8px">
+                    </button>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="view page-enter" id="app-content">
+                <!-- Routed content will be injected here -->
+            </div>
+        </main>
+        
+        <!-- Mobile Bottom Nav -->
+        <nav class="bottom-nav">
+            <a href="#/dashboard" class="bn-item active" data-route="dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Tổng quan</span>
+            </a>
+            <a href="#/triage" class="bn-item" data-route="triage">
+                <i data-lucide="git-merge"></i>
+                <span>Phân luồng</span>
+                <span class="badge-count">1</span>
+            </a>
+            <a href="#/patients" class="bn-item" data-route="patients">
+                <i data-lucide="user-square-2"></i>
+                <span>Bệnh nhân</span>
+            </a>
+            <a href="#/appointments" class="bn-item" data-route="appointments">
+                <i data-lucide="calendar"></i>
+                <span>Lịch hẹn</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./js/utils.js?v=4"></script>
+    <script src="./js/data.js?v=4"></script>
+    <script src="./js/ui.js?v=4"></script>
+    
+    <!-- Pages -->
+    <script src="./js/pages/dashboard.js?v=4"></script>
+    
+    <!-- App Entry -->
+    <script src="./js/app.js?v=4"></script>
+</body>
+</html>

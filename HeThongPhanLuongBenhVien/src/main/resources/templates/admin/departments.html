@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Quản lý Khoa')}"></head>
+<body class="min-h-screen bg-medical-bg">
+    <div th:replace="~{fragments/sidebar-admin :: sidebar}"></div>
+
+    <main class="ml-64 p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-800">🏥 Quản lý Khoa</h1>
+                <p class="text-sm text-slate-500 mt-1">Danh sách các khoa / phòng ban trong bệnh viện</p>
+            </div>
+            <button onclick="document.getElementById('addModal').classList.remove('hidden')"
+                    class="px-5 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all text-sm flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> Thêm khoa
+            </button>
+        </div>
+
+        <!-- Flash messages -->
+        <div th:if="${success}" class="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span th:text="${success}"></span>
+        </div>
+        <div th:if="${error}" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4"></i>
+            <span th:text="${error}"></span>
+        </div>
+
+        <!-- Departments Table -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <h2 class="font-semibold text-slate-700">Danh sách khoa</h2>
+                <span class="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-medium"
+                      th:text="${#lists.size(departments)} + ' khoa'">0 khoa</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <th class="px-6 py-3">Tên khoa</th>
+                            <th class="px-6 py-3">Mã</th>
+                            <th class="px-6 py-3">Tòa nhà</th>
+                            <th class="px-6 py-3">Tầng / Phòng</th>
+                            <th class="px-6 py-3">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <tr th:each="dept : ${departments}"
+                            class="hover:bg-slate-50/70 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="font-semibold text-slate-800" th:text="${dept.name}"></div>
+                                <div class="text-xs text-slate-400 mt-0.5" th:text="${dept.description}"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="font-mono text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-lg"
+                                      th:text="${dept.code}"></span>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600" th:text="${dept.building ?: '—'}"></td>
+                            <td class="px-6 py-4 text-slate-600">
+                                <span th:text="${dept.floor != null ? 'Tầng ' + dept.floor : '—'}"></span>
+                                <span th:if="${dept.roomNumbers}" th:text="' · ' + dept.roomNumbers" class="text-slate-400"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span th:if="${dept.isActive}"
+                                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Hoạt động
+                                </span>
+                                <span th:unless="${dept.isActive}"
+                                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Ngừng
+                                </span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(departments)}">
+                            <td colspan="5" class="px-6 py-12 text-center text-slate-400">
+                                <i data-lucide="building-2" class="w-10 h-10 mx-auto mb-3 opacity-30"></i>
+                                <p>Chưa có khoa nào</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Department Modal -->
+    <div id="addModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800">Thêm khoa mới</h3>
+                <button onclick="document.getElementById('addModal').classList.add('hidden')"
+                        class="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+                </button>
+            </div>
+            <form th:action="@{/admin/departments/create}" method="post" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Tên khoa *</label>
+                        <input name="name" required placeholder="VD: Khoa Tim Mạch"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Mã khoa *</label>
+                        <input name="code" required placeholder="VD: TM"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Prefix phiếu</label>
+                        <input name="ticketPrefix" placeholder="VD: TM" value="NB"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Tòa nhà</label>
+                        <input name="building" placeholder="VD: Tòa A"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Tầng</label>
+                        <input name="floor" type="number" placeholder="VD: 3"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Mô tả</label>
+                        <textarea name="description" rows="2" placeholder="Mô tả ngắn về khoa..."
+                                  class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm resize-none"></textarea>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')"
+                            class="flex-1 py-2.5 border border-slate-200 text-slate-600 font-medium rounded-xl hover:bg-slate-50 transition-all text-sm">
+                        Hủy
+                    </button>
+                    <button type="submit"
+                            class="flex-1 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all text-sm">
+                        Thêm khoa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>
