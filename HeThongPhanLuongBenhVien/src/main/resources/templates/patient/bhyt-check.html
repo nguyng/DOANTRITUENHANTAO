@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Kiểm tra BHYT')}"></head>
+<body class="min-h-screen bg-medical-bg flex flex-col">
+
+    <div th:replace="~{fragments/navbar-patient :: navbar}"></div>
+
+    <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-8">
+
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-2xl font-extrabold text-slate-800">🏥 Kiểm tra Bảo Hiểm Y Tế</h1>
+            <p class="text-sm text-slate-500 mt-1">
+                Nhập mã BHYT để xác thực tính hợp lệ, đối tượng hưởng và mức chi trả.
+            </p>
+        </div>
+
+        <!-- Hướng dẫn định dạng mã BHYT -->
+        <div class="bg-blue-50 border border-blue-100 rounded-2xl p-5 mb-6">
+            <p class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">📋 Cấu trúc mã BHYT (15 ký tự — QĐ 1666/QĐ-BHXH)</p>
+            <div class="font-mono text-center text-xl font-extrabold text-slate-700 tracking-widest mb-3">
+                <span class="text-blue-600 bg-blue-100 px-2 py-1 rounded-lg">DN</span>
+                <span class="text-purple-600 bg-purple-100 px-2 py-1 rounded-lg mx-1">4</span>
+                <span class="text-emerald-600 bg-emerald-100 px-2 py-1 rounded-lg">79</span>
+                <span class="text-slate-600 bg-slate-100 px-2 py-1 rounded-lg ml-1">0000000001</span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div class="bg-white rounded-xl p-3 text-center border border-blue-100">
+                    <p class="font-bold text-blue-600 text-base">2 chữ cái</p>
+                    <p class="text-slate-500 mt-1">Mã đối tượng</p>
+                    <p class="text-slate-400 text-xs mt-1">TE, HN, DN, HS...</p>
+                </div>
+                <div class="bg-white rounded-xl p-3 text-center border border-purple-100">
+                    <p class="font-bold text-purple-600 text-base">1 chữ số</p>
+                    <p class="text-slate-500 mt-1">Mức hưởng</p>
+                    <p class="text-slate-400 text-xs mt-1">1=100%, 3=95%, 4=80%</p>
+                </div>
+                <div class="bg-white rounded-xl p-3 text-center border border-emerald-100">
+                    <p class="font-bold text-emerald-600 text-base">2 chữ số</p>
+                    <p class="text-slate-500 mt-1">Mã tỉnh ĐKBĐ</p>
+                    <p class="text-slate-400 text-xs mt-1">79=HCM, 01=HN</p>
+                </div>
+                <div class="bg-white rounded-xl p-3 text-center border border-slate-100">
+                    <p class="font-bold text-slate-600 text-base">10 chữ số</p>
+                    <p class="text-slate-500 mt-1">Số thứ tự</p>
+                    <p class="text-slate-400 text-xs mt-1">Do BHXH cấp</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form nhập mã -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
+            <label class="block text-sm font-semibold text-slate-700 mb-3">Nhập mã BHYT cần kiểm tra</label>
+            <div class="relative">
+                <input type="text"
+                       id="bhytInput"
+                       placeholder="VD: DN47900000001XX"
+                       maxlength="17"
+                       autocomplete="off"
+                       class="w-full py-4 px-5 pr-14 text-lg font-mono tracking-widest rounded-xl border-2 border-slate-200
+                              focus:border-primary focus:outline-none transition-all uppercase placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-base"
+                />
+                <!-- Spinner khi đang verify -->
+                <div id="spinner" class="hidden absolute right-4 top-1/2 -translate-y-1/2">
+                    <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <!-- Tick / Cross icon -->
+                <div id="statusIcon" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-xl"></div>
+            </div>
+
+            <!-- Thanh tiến độ 15 ký tự -->
+            <div class="mt-3 flex items-center gap-3">
+                <div class="flex gap-0.5 flex-1">
+                    <div th:each="i : ${#numbers.sequence(1,15)}"
+                         class="h-1.5 flex-1 rounded-full bg-slate-100 progress-bar" th:id="'bar-' + ${i}"></div>
+                    <!-- JS sẽ fill các bar này -->
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b1"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b2"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b3"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b4"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b5"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b6"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b7"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b8"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b9"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b10"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b11"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b12"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b13"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b14"></div>
+                    <div class="h-1.5 flex-1 rounded-full bg-slate-100" id="b15"></div>
+                </div>
+                <span id="charCount" class="text-xs font-mono text-slate-400">0/15</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Tự động kiểm tra khi nhập đủ 15 ký tự</p>
+        </div>
+
+        <!-- Kết quả xác thực -->
+        <div id="resultBox" class="hidden"></div>
+
+        <!-- Ví dụ mã mẫu để thử -->
+        <div class="bg-slate-50 rounded-2xl border border-slate-100 p-5">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">💡 Mã BHYT mẫu để thử nghiệm</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <button onclick="tryCode('DN47900000001X')" class="text-left px-4 py-3 bg-white rounded-xl border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                    <p class="font-mono text-sm font-bold text-slate-700 group-hover:text-primary">DN4790000000YY</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Người lao động — TP.HCM — 80%</p>
+                </button>
+                <button onclick="fillSample('HN1010000000YY')" class="text-left px-4 py-3 bg-white rounded-xl border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                    <p class="font-mono text-sm font-bold text-slate-700 group-hover:text-primary">HN1010000000YY</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Hộ nghèo — Hà Nội — 100%</p>
+                </button>
+                <button onclick="fillSample('TE1790000000ZZ')" class="text-left px-4 py-3 bg-white rounded-xl border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                    <p class="font-mono text-sm font-bold text-slate-700 group-hover:text-primary">TE1790000000ZZ</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Trẻ em dưới 6 tuổi — TP.HCM — 100%</p>
+                </button>
+                <button onclick="fillSample('HS4790000000WW')" class="text-left px-4 py-3 bg-white rounded-xl border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                    <p class="font-mono text-sm font-bold text-slate-700 group-hover:text-primary">HS4790000000WW</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Học sinh/Sinh viên — TP.HCM — 80%</p>
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mt-3">* Thay XX/YY/ZZ/WW bằng 2 chữ số bất kỳ (VD: 01, 23, 99...)</p>
+        </div>
+
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <script>
+    lucide.createIcons();
+
+    const input      = document.getElementById('bhytInput');
+    const resultBox  = document.getElementById('resultBox');
+    const spinner    = document.getElementById('spinner');
+    const statusIcon = document.getElementById('statusIcon');
+    const charCount  = document.getElementById('charCount');
+    const bars       = Array.from({length:15}, (_,i) => document.getElementById('b'+(i+1)));
+
+    let debounceTimer = null;
+
+    input.addEventListener('input', () => {
+        const raw = input.value.replace(/\s+/g,'').toUpperCase().slice(0,15);
+        input.value = raw;
+        const len = raw.length;
+        charCount.textContent = len + '/15';
+
+        // Cập nhật progress bars
+        bars.forEach((b,i) => {
+            if (!b) return;
+            b.classList.remove('bg-primary','bg-emerald-400','bg-red-400','bg-slate-100');
+            if (i < len) {
+                b.classList.add(len === 15 ? 'bg-primary' : 'bg-primary/50');
+            } else {
+                b.classList.add('bg-slate-100');
+            }
+        });
+
+        // Xoá kết quả cũ nếu đang sửa
+        if (len < 15) {
+            resultBox.classList.add('hidden');
+            resultBox.innerHTML = '';
+            statusIcon.classList.add('hidden');
+            statusIcon.textContent = '';
+        }
+
+        // Gọi verify khi đủ 15 ký tự
+        if (len === 15) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => verifyBhyt(raw), 400);
+        }
+    });
+
+    async function verifyBhyt(ma) {
+        spinner.classList.remove('hidden');
+        statusIcon.classList.add('hidden');
+        resultBox.classList.add('hidden');
+
+        try {
+            const res  = await fetch('/api/bhyt/verify', {
+                method:  'POST',
+                headers: {'Content-Type': 'application/json'},
+                body:    JSON.stringify({maThe: ma})
+            });
+            const data = await res.json();
+            showResult(data);
+        } catch(e) {
+            showError('Không thể kết nối máy chủ. Vui lòng thử lại.');
+        } finally {
+            spinner.classList.add('hidden');
+        }
+    }
+
+    function showResult(d) {
+        resultBox.classList.remove('hidden');
+
+        // Update thanh progress màu
+        bars.forEach(b => {
+            if (!b) return;
+            b.classList.remove('bg-primary','bg-primary/50','bg-emerald-400','bg-red-400','bg-slate-100');
+            b.classList.add(d.valid ? 'bg-emerald-400' : 'bg-red-400');
+        });
+
+        // Status icon
+        statusIcon.classList.remove('hidden');
+        statusIcon.textContent = d.valid ? '✅' : '❌';
+
+        if (d.valid) {
+            const dungTuyenBadge = d.dungTuyen
+                ? '<span class="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-1 rounded-full">✔ Đúng tuyến — hưởng ' + d.mucHuong + '%</span>'
+                : '<span class="text-xs bg-orange-100 text-orange-700 font-bold px-2 py-1 rounded-full">⚠ Trái tuyến — chỉ hưởng 40%</span>';
+
+            const denNgayStr = d.denNgay ? new Date(d.denNgay).toLocaleDateString('vi-VN') : '—';
+            const tuNgayStr  = d.tuNgay  ? new Date(d.tuNgay ).toLocaleDateString('vi-VN') : '—';
+
+            // Màu mức hưởng
+            const mucColor = d.mucHuong === 100 ? 'text-emerald-600'
+                           : d.mucHuong >=  95 ? 'text-blue-600'
+                           :                    'text-amber-600';
+
+            resultBox.innerHTML = `
+            <div class="bg-white rounded-2xl border border-emerald-200 shadow-sm overflow-hidden mb-6">
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 text-white">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-2xl">✅</div>
+                        <div>
+                            <p class="font-bold text-lg">Thẻ BHYT hợp lệ</p>
+                            <p class="text-sm text-white/80 font-mono">${d.maThe}</p>
+                        </div>
+                        <div class="ml-auto">${dungTuyenBadge}</div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+                        <div class="bg-slate-50 rounded-xl p-4 text-center">
+                            <p class="text-2xl font-black ${mucColor}">${d.mucHuong}%</p>
+                            <p class="text-xs text-slate-500 mt-1">BHYT chi trả</p>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-4 text-center">
+                            <p class="text-sm font-bold text-slate-700">${d.tenDoiTuong || '—'}</p>
+                            <p class="text-xs text-slate-500 mt-1">Đối tượng</p>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-4 text-center">
+                            <p class="text-sm font-bold text-slate-700">${d.tenTinh || '—'}</p>
+                            <p class="text-xs text-slate-500 mt-1">Tỉnh ĐKBĐ</p>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm py-2 border-b border-slate-50">
+                            <span class="text-slate-500">Mã đối tượng</span>
+                            <span class="font-semibold font-mono">${d.maDoiTuong}</span>
+                        </div>
+                        <div class="flex justify-between text-sm py-2 border-b border-slate-50">
+                            <span class="text-slate-500">Hiệu lực từ</span>
+                            <span class="font-semibold">${tuNgayStr}</span>
+                        </div>
+                        <div class="flex justify-between text-sm py-2 border-b border-slate-50">
+                            <span class="text-slate-500">Hết hạn ngày</span>
+                            <span class="font-semibold text-red-500">${denNgayStr}</span>
+                        </div>
+                        <div class="flex justify-between text-sm py-2">
+                            <span class="text-slate-500">Nguồn xác thực</span>
+                            <span class="text-xs bg-slate-100 text-slate-600 font-mono px-2 py-1 rounded">${d.source}</span>
+                        </div>
+                    </div>
+                    ${d.errorMessage ? `<div class="mt-4 bg-blue-50 rounded-xl p-3 text-sm text-blue-700">${d.errorMessage}</div>` : ''}
+
+                    <button onclick="applyBhyt('${d.maThe}')"
+                            class="w-full mt-5 py-3 bg-gradient-to-r from-primary to-primary-dark text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all text-sm">
+                        💾 Cập nhật BHYT này vào hồ sơ của tôi
+                    </button>
+                </div>
+            </div>`;
+        } else {
+            resultBox.innerHTML = `
+            <div class="bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden mb-6">
+                <div class="bg-gradient-to-r from-red-500 to-rose-500 px-6 py-4 text-white">
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl">❌</div>
+                        <div>
+                            <p class="font-bold text-lg">Thẻ BHYT không hợp lệ</p>
+                            <p class="text-sm text-white/80 font-mono">${d.maThe || input.value}</p>
+                        </div>
+                        <span class="ml-auto text-xs bg-white/20 font-bold px-3 py-1 rounded-full">${d.errorCode || 'ERR'}</span>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <p class="text-sm text-slate-700 font-medium">${d.errorMessage || 'Mã BHYT không hợp lệ'}</p>
+                    <div class="mt-4 bg-amber-50 border border-amber-100 rounded-xl p-4">
+                        <p class="text-xs font-bold text-amber-700 mb-2">💡 Gợi ý xử lý:</p>
+                        <ul class="text-xs text-amber-700 space-y-1 list-disc list-inside">
+                            <li>Kiểm tra lại mã trên thẻ BHYT vật lý của bạn</li>
+                            <li>Mã BHYT gồm đúng <strong>15 ký tự</strong>: 2 chữ cái + 1 số + 2 số + 10 số</li>
+                            <li>Liên hệ BHXH tỉnh/thành để được cấp lại thẻ</li>
+                            <li>Hotline BHXH Việt Nam: <strong>1900 9068</strong></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>`;
+        }
+    }
+
+    function showError(msg) {
+        resultBox.classList.remove('hidden');
+        resultBox.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-2xl p-5 mb-6 text-sm text-red-600">${msg}</div>`;
+    }
+
+    async function applyBhyt(ma) {
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = 'Đang cập nhật...';
+        try {
+            const res  = await fetch('/api/bhyt/apply', {
+                method:  'POST',
+                headers: {'Content-Type': 'application/json'},
+                body:    JSON.stringify({maThe: ma})
+            });
+            const data = await res.json();
+            if (data.success) {
+                btn.textContent = '✅ Đã cập nhật thành công!';
+                btn.classList.remove('from-primary','to-primary-dark');
+                btn.classList.add('from-emerald-500','to-teal-500');
+            } else {
+                btn.textContent = '❌ ' + (data.message || 'Lỗi cập nhật');
+                btn.disabled = false;
+            }
+        } catch(e) {
+            btn.textContent = 'Lỗi kết nối, thử lại';
+            btn.disabled = false;
+        }
+    }
+
+    function fillSample(code) {
+        input.value = '';
+        // Animate typing effect
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i < code.length) {
+                input.value += code[i++];
+                input.dispatchEvent(new Event('input'));
+            } else {
+                clearInterval(interval);
+            }
+        }, 60);
+    }
+    </script>
+</body>
+</html>

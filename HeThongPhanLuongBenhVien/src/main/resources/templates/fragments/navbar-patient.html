@@ -35,6 +35,10 @@
                    th:classappend="${currentPage == 'directions'} ? 'bg-primary/10 text-primary' : ''">
                     <i data-lucide="map-pin" class="w-4 h-4 inline mr-1"></i> Chỉ đường
                 </a>
+                <a href="/bhyt/check" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
+                   th:classappend="${currentPage == 'bhyt'} ? 'bg-emerald-50 text-emerald-600' : ''">
+                    <i data-lucide="shield-check" class="w-4 h-4 inline mr-1"></i> Kiểm tra BHYT
+                </a>
             </div>
 
             <!-- User Menu -->

@@ -25,8 +25,13 @@ public class SecurityConfig {
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/nurse/**").hasAnyRole("NURSE", "ADMIN", "DOCTOR")
                 
+                // Cho phép public verify (lễ tân không cần đăng nhập)
+                .requestMatchers("/api/bhyt/verify").permitAll()
+                
                 // Các trang bệnh nhân (cần đăng nhập)
-                .requestMatchers("/chat/**", "/ticket/**", "/profile/**", "/visits/**", "/directions/**", "/change-password").authenticated()
+                .requestMatchers("/chat/**", "/ticket/**", "/tickets/**", "/profile/**",
+                                 "/visits/**", "/directions/**", "/change-password",
+                                 "/bhyt/**", "/api/bhyt/**").authenticated()
                 
                 .anyRequest().authenticated()
             )
