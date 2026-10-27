@@ -87,5 +87,23 @@ public class Department {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = true)
     private LocalDateTime createdAt;
+
+    /** Getter tiện ích trả về danh sách/số phòng */
+    public String getRoomNumber() {
+        return roomNumbers;
+    }
+
+    /** Getter tiện ích mô tả vị trí (Tòa nhà, Tầng) */
+    public String getLocation() {
+        StringBuilder sb = new StringBuilder();
+        if (building != null && !building.isBlank()) {
+            sb.append(building);
+        }
+        if (floor != null) {
+            if (!sb.isEmpty()) sb.append(" — ");
+            sb.append("Tầng ").append(floor);
+        }
+        return sb.toString();
+    }
 }
 

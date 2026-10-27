@@ -144,6 +144,20 @@ public class PatientController {
         return "patient/ticket";
     }
 
+    /** In phiếu khám — trả về trang riêng chỉ dùng để print */
+    @GetMapping("/tickets/{id}/print")
+    public String printTicket(@PathVariable UUID id, Model model,
+                              @AuthenticationPrincipal UserDetails ud) {
+        Ticket ticket = ticketService.findById(id);
+        currentUser(ud).ifPresent(u -> model.addAttribute("currentUser", u));
+        model.addAttribute("ticket", ticket);
+        // Tính vị trí trong hàng đợi để hiển thị trên phiếu
+        int[] waitInfo = ticketService.calculateWaitInfo(ticket);
+        model.addAttribute("queuePosition",        waitInfo[0]);
+        model.addAttribute("estimatedWaitMinutes", waitInfo[1]);
+        return "patient/ticket-print";
+    }
+
     @PostMapping("/tickets/{id}/cancel")
     public String cancelTicket(@PathVariable UUID id,
                                @AuthenticationPrincipal UserDetails ud,

@@ -169,6 +169,17 @@ public class NurseController {
         return "redirect:/nurse/queue/" + deptId;
     }
 
+    /** In phiếu khám — Y tá in thay bệnh nhân tại quầy */
+    @GetMapping("/queue/{ticketId}/print")
+    public String printTicket(@PathVariable UUID ticketId, Model model,
+                              @AuthenticationPrincipal UserDetails ud) {
+        User nurse = resolveNurse(ud);
+        addNurseAttrs(model, nurse);
+        Ticket ticket = ticketService.findById(ticketId);
+        model.addAttribute("ticket", ticket);
+        return "patient/ticket-print";
+    }
+
     /** Tìm kiếm bệnh nhân */
     @GetMapping("/search")
     public String search(Model model, @AuthenticationPrincipal UserDetails ud) {

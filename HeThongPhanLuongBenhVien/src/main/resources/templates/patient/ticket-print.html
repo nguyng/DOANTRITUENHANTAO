@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In Phiếu Khám — MedAssist AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* ── Reset & Base ─────────────────────────────────────────────── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Arial', sans-serif;
+            background: #f0f9ff;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 24px 16px;
+        }
+
+        .preview-wrapper {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Nút điều khiển (ẩn khi in) */
+        .no-print {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .btn-print {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #0077B6, #023E8A);
+            color: white;
+            font-weight: 700;
+            font-size: 15px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0,119,182,.4);
+            transition: all .2s;
+        }
+        .btn-print:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,119,182,.5); }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: white;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .2s;
+        }
+        .btn-back:hover { border-color: #0077B6; color: #0077B6; }
+
+        /* ── Phiếu khám ─────────────────────────────────────────────── */
+        .ticket-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.15);
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* Header màu theo mức ưu tiên */
+        .ticket-header {
+            padding: 28px 24px 20px;
+            text-align: center;
+            color: white;
+        }
+        .ticket-header.m1 { background: linear-gradient(135deg,#ef4444,#dc2626); }
+        .ticket-header.m2 { background: linear-gradient(135deg,#f97316,#ea580c); }
+        .ticket-header.m3 { background: linear-gradient(135deg,#0077B6,#023E8A); }
+        .ticket-header.m4 { background: linear-gradient(135deg,#22c55e,#16a34a); }
+        .ticket-header.m5 { background: linear-gradient(135deg,#64748b,#475569); }
+
+        .hospital-name {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            opacity: .85;
+            margin-bottom: 10px;
+        }
+
+        .ticket-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            opacity: .75;
+        }
+
+        .ticket-number {
+            font-size: 72px;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -.02em;
+            margin: 4px 0 10px;
+        }
+
+        .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,.2);
+            padding: 6px 18px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        /* Kéo răng cưa */
+        .deco-divider {
+            display: flex;
+            align-items: center;
+        }
+        .deco-divider .dash { flex: 1; height: 1px; border-top: 2px dashed #e2e8f0; }
+        .deco-divider .scissors { font-size: 18px; padding: 0 8px; color: #94a3b8; }
+
+        /* Body */
+        .ticket-body { padding: 20px 24px; }
+
+        /* Cảnh báo khẩn */
+        .emergency-alert {
+            background: #fef2f2;
+            border: 2px solid #fee2e2;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .emergency-alert .icon { font-size: 22px; }
+        .emergency-alert p { font-size: 12px; font-weight: 700; color: #dc2626; }
+        .emergency-alert p span { font-weight: 400; color: #ef4444; }
+
+        /* Hàng đợi */
+        .queue-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .queue-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+        .queue-box .val { font-size: 28px; font-weight: 900; color: #0077B6; }
+        .queue-box .lbl { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; margin-top: 2px; }
+
+        /* Thông tin */
+        .info-section { margin-bottom: 16px; }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 9px 0;
+            border-bottom: 1px solid #f1f5f9;
+            gap: 12px;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-row .lbl {
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            flex-shrink: 0;
+            min-width: 80px;
+        }
+        .info-row .val {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            text-align: right;
+        }
+        .info-row .val.mono { font-size: 11px; font-weight: 600; font-family: monospace; }
+
+        /* Địa điểm */
+        .location-box {
+            background: linear-gradient(135deg,#eff6ff,#dbeafe);
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+        .location-box .loc-title {
+            font-size: 10px;
+            font-weight: 700;
+            color: #3b82f6;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: 6px;
+        }
+        .location-box .loc-text { font-size: 13px; font-weight: 700; color: #1e293b; }
+        .location-box .loc-guide { font-size: 11px; color: #475569; margin-top: 4px; line-height: 1.5; }
+
+        /* QR */
+        .qr-section {
+            text-align: center;
+            padding: 16px 0 10px;
+            border-top: 2px dashed #e2e8f0;
+        }
+        .qr-section .qr-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: 10px;
+        }
+        .qr-section img { border-radius: 12px; border: 1px solid #e2e8f0; }
+        .qr-section .qr-code-text {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            font-family: monospace;
+            letter-spacing: .1em;
+            margin-top: 8px;
+        }
+
+        /* Footer */
+        .ticket-footer {
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            padding: 14px 20px;
+            text-align: center;
+        }
+        .ticket-footer p { font-size: 10px; color: #94a3b8; line-height: 1.6; }
+        .ticket-footer p.bold { font-weight: 700; color: #64748b; margin-bottom: 4px; }
+
+        /* BHYT badge */
+        .bhyt-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #dcfce7;
+            color: #16a34a;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 999px;
+        }
+        .no-bhyt-tag {
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 999px;
+        }
+
+        /* ── @media print — máy in nhiệt 80mm ─────────────────────── */
+        @media print {
+            @page {
+                size: 80mm auto;
+                margin: 5mm;
+            }
+            body { background: white; padding: 0; }
+            .no-print { display: none !important; }
+            .ticket-card { box-shadow: none; border-radius: 0; }
+            .ticket-number { font-size: 56px; }
+            .preview-wrapper { max-width: 70mm; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="preview-wrapper">
+
+    <!-- Nút điều khiển -->
+    <div class="no-print">
+        <a th:href="${#httpServletRequest != null ? #httpServletRequest.getHeader('Referer') : '/ticket'}"
+           href="/ticket" class="btn-back">← Quay lại</a>
+        <button class="btn-print" onclick="window.print()">🖨️&nbsp; In phiếu khám</button>
+    </div>
+
+    <!-- Phiếu khám -->
+    <div class="ticket-card" th:if="${ticket != null}">
+
+        <!-- Header -->
+        <div class="ticket-header"
+             th:classappend="${ticket.priority.name() == 'M1'} ? 'm1' :
+                             (${ticket.priority.name() == 'M2'} ? 'm2' :
+                             (${ticket.priority.name() == 'M4'} ? 'm4' :
+                             (${ticket.priority.name() == 'M5'} ? 'm5' : 'm3')))">
+
+            <div class="hospital-name">&#127973; Bệnh viện Đa khoa MedCore</div>
+            <div class="ticket-label">PHIẾU KHÁM BỆNH</div>
+            <div class="ticket-number" th:text="${ticket.ticketNumber}">TM-007</div>
+            <div class="priority-badge">
+                <span th:text="${ticket.priority.name() == 'M1'} ? '&#128308;' :
+                               (${ticket.priority.name() == 'M2'} ? '&#128992;' :
+                               (${ticket.priority.name() == 'M4'} ? '&#128994;' :
+                               (${ticket.priority.name() == 'M5'} ? '&#9898;' : '&#128309;')))"></span>
+                <span th:text="${ticket.priority.name() == 'M1'} ? 'M1 - CAP CUU NGAY' :
+                               (${ticket.priority.name() == 'M2'} ? 'M2 - KHAN CAP' :
+                               (${ticket.priority.name() == 'M3'} ? 'M3 - UU TIEN' :
+                               (${ticket.priority.name() == 'M4'} ? 'M4 - THONG THUONG' : 'M5 - KHONG KHAN')))">M3 - UU TIEN</span>
+            </div>
+        </div>
+
+        <!-- Răng cưa -->
+        <div class="deco-divider">
+            <div class="dash"></div>
+            <div class="scissors">&#9986;</div>
+            <div class="dash"></div>
+        </div>
+
+        <!-- Body -->
+        <div class="ticket-body">
+
+            <!-- Cảnh báo khẩn M1 -->
+            <div class="emergency-alert" th:if="${ticket.priority.name() == 'M1'}">
+                <div class="icon">&#128680;</div>
+                <div>
+                    <p>CAP CUU — VAO NGAY!</p>
+                    <p><span>Den thang phong cap cuu, khong can cho.</span></p>
+                </div>
+            </div>
+
+            <!-- Cảnh báo khẩn M2 -->
+            <div class="emergency-alert"
+                 th:if="${ticket.priority.name() == 'M2'}"
+                 style="background:#fff7ed;border-color:#fed7aa;">
+                <div class="icon">&#9888;&#65039;</div>
+                <div>
+                    <p style="color:#c2410c;">KHAN CAP — Uu tien kham som</p>
+                    <p><span style="color:#ea580c;">Mang phieu den quy y ta ngay.</span></p>
+                </div>
+            </div>
+
+            <!-- Thông tin hàng đợi -->
+            <div class="queue-info" th:if="${queuePosition != null}">
+                <div class="queue-box">
+                    <div class="val" th:text="${queuePosition}">3</div>
+                    <div class="lbl">Luot truoc ban</div>
+                </div>
+                <div class="queue-box">
+                    <div class="val" th:text="${estimatedWaitMinutes} ?: '—'">15</div>
+                    <div class="lbl">Phut cho du kien</div>
+                </div>
+            </div>
+
+            <!-- Thông tin bệnh nhân -->
+            <div class="info-section">
+                <div class="info-row">
+                    <span class="lbl">Ho va ten</span>
+                    <span class="val" th:text="${ticket.patient != null ? ticket.patient.fullName : ''}">Nguyen Van A</span>
+                </div>
+                <div class="info-row">
+                    <span class="lbl">Ngay sinh</span>
+                    <span class="val"
+                          th:text="${ticket.patient != null and ticket.patient.dob != null}
+                                    ? ${#temporals.format(ticket.patient.dob,'dd/MM/yyyy')} : '—'">01/01/1980</span>
+                </div>
+                <div class="info-row">
+                    <span class="lbl">Ma BHYT</span>
+                    <span class="val mono" th:text="${ticket.bhytNumber} ?: '(Khong co)'">HN47900000001</span>
+                </div>
+                <div class="info-row">
+                    <span class="lbl">Loai kham</span>
+                    <span class="val">
+                        <span th:if="${ticket.patient != null and ticket.patient.bhytNumber != null}"
+                              class="bhyt-tag">Co BHYT</span>
+                        <span th:unless="${ticket.patient != null and ticket.patient.bhytNumber != null}"
+                              class="no-bhyt-tag">Kham dich vu</span>
+                    </span>
+                </div>
+                <div class="info-row" th:if="${ticket.patient != null and ticket.patient.bhytDiscountRate != null}">
+                    <span class="lbl">Ty le BHYT</span>
+                    <span class="val" th:text="${#numbers.formatPercent(ticket.patient.bhytDiscountRate,0,0)} + ' chi tra'">80% chi tra</span>
+                </div>
+                <div class="info-row">
+                    <span class="lbl">Khoa kham</span>
+                    <span class="val" th:text="${ticket.departmentName}">Khoa Tim Mach</span>
+                </div>
+                <div class="info-row">
+                    <span class="lbl">Tiep nhan</span>
+                    <span class="val"
+                          th:text="${#temporals.format(ticket.createdAt,'HH:mm dd/MM/yyyy')}">09:30 27/10/2026</span>
+                </div>
+            </div>
+
+            <!-- Tóm tắt AI -->
+            <div class="location-box" th:if="${ticket.aiSummary}">
+                <div class="loc-title">Ghi nhan AI phan luong</div>
+                <div class="loc-text" th:text="${ticket.aiSummary}">Benh nhan bao dau nguc, kho tho...</div>
+            </div>
+
+            <!-- Địa điểm -->
+            <div class="location-box"
+                 th:if="${ticket.department != null and ticket.department.building != null}">
+                <div class="loc-title">Dia diem kham</div>
+                <div class="loc-text"
+                     th:text="${ticket.department.building}
+                               + ' — Tang ' + ${ticket.department.floor}
+                               + ' — Phong ' + (${ticket.department.roomNumbers} ?: '')">
+                    Toa A — Tang 2 — Phong 201–205
+                </div>
+                <div class="loc-guide" th:if="${ticket.locationGuide}"
+                     th:text="${ticket.locationGuide}">Tu sanh chinh di thang den thang may, len tang 2, re trai.</div>
+            </div>
+
+            <!-- QR Code -->
+            <div class="qr-section">
+                <div class="qr-label">Quet ma QR de xem phieu dien tu</div>
+                <img th:src="'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='
+                             + ${ticket.ticketNumber} + '-' + ${ticket.id}"
+                     alt="QR phieu kham" width="120" height="120" />
+                <div class="qr-code-text" th:text="${ticket.ticketNumber}">TM-007</div>
+            </div>
+
+        </div><!-- /ticket-body -->
+
+        <!-- Footer -->
+        <div class="ticket-footer">
+            <p class="bold">Vui long giu phieu va lang nghe loa goi so</p>
+            <p>Chu y man hinh LED tai cua phong kham<br>
+               Mat phieu lien he quy tiep don<br>
+               <strong>Hotline: 1900 xxxx</strong> — BV Da khoa MedCore</p>
+        </div>
+
+    </div><!-- /ticket-card -->
+
+    <div th:if="${ticket == null}" style="text-align:center;padding:60px;color:#64748b;">
+        <p style="font-size:20px;font-weight:700;margin-bottom:16px;">Khong tim thay phieu kham.</p>
+        <a href="/ticket" style="color:#0077B6;font-weight:600;">← Quay lai</a>
+    </div>
+
+</div><!-- /preview-wrapper -->
+
+</body>
+</html>

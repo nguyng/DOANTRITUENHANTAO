@@ -80,7 +80,7 @@
                                       th:text="${t.status.name() == 'WAITING'} ? 'Chờ khám' : (${t.status.name() == 'CALLED'} ? 'Đang khám' : 'Hoàn tất')">Chờ khám</span>
                             </td>
                             <td class="px-6 py-4 text-slate-500 text-xs" th:text="${#temporals.format(t.createdAt, 'HH:mm')}">09:30</td>
-                            <td class="px-6 py-4 text-center">
+                                <td class="px-6 py-4 text-center">
                                 <div class="flex items-center justify-center gap-2">
                                     <!-- Gọi số -->
                                     <form th:if="${t.status.name() == 'WAITING'}" th:action="@{/nurse/queue/{id}/call(id=${t.id})}" method="post">
@@ -89,6 +89,11 @@
                                             <i data-lucide="phone-call" class="w-4 h-4"></i>
                                         </button>
                                     </form>
+                                    <!-- In phiếu -->
+                                    <a th:href="@{/nurse/queue/{id}/print(id=${t.id})}" target="_blank"
+                                       class="p-2 bg-sky-50 text-sky-600 rounded-lg hover:bg-sky-100 transition-all" title="In phiếu khám">
+                                        <i data-lucide="printer" class="w-4 h-4"></i>
+                                    </a>
                                     <!-- Chuyển khoa -->
                                     <button th:if="${t.status.name() == 'WAITING' or t.status.name() == 'CALLED'}" onclick="openTransfer(this)"
                                             th:data-ticket-id="${t.id}" th:data-patient-name="${t.patientName}"

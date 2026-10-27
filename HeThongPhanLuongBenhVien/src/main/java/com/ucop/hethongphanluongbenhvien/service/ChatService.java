@@ -20,9 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import java.time.Duration;
-
 @Slf4j
 @Service
 @Transactional(readOnly = true)
@@ -40,16 +37,13 @@ public class ChatService {
                        TicketService ticketService,
                        UserService userService,
                        DepartmentService departmentService,
-                       RestTemplateBuilder restTemplateBuilder) {
+                       RestTemplate restTemplate) {
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.ticketService = ticketService;
         this.userService = userService;
         this.departmentService = departmentService;
-        this.restTemplate = restTemplateBuilder
-                .setConnectTimeout(Duration.ofSeconds(5))
-                .setReadTimeout(Duration.ofSeconds(15))
-                .build();
+        this.restTemplate = restTemplate;
     }
 
     /** URL FastAPI AI service — cấu hình trong application.properties */
@@ -125,10 +119,14 @@ public class ChatService {
 
             try {
                 var dept = departmentService.findByCode(deptCode);
+                String roomPart = (dept.getRoomNumber() != null && !dept.getRoomNumber().isBlank())
+                        ? " · Phòng " + dept.getRoomNumber() : "";
+                String locPart = (dept.getLocation() != null && !dept.getLocation().isBlank())
+                        ? " · " + dept.getLocation() : "";
                 triageResult = new TriageResult(
                         dept.getId(),
                         dept.getName(),
-                        dept.getName() + " · Phòng " + dept.getRoomNumber() + " · " + dept.getLocation(),
+                        dept.getName() + roomPart + locPart,
                         dept.getLocationGuide(),
                         priority,
                         confidence,

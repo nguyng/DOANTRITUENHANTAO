@@ -128,13 +128,23 @@
                 </div>
 
                 <!-- Actions -->
-                <div class="px-6 pb-6" th:if="${ticket.status.name() == 'WAITING'}">
-                    <form th:action="@{/tickets/{id}/cancel(id=${ticket.id})}" method="post">
-                        <button type="submit" onclick="return confirm('Bạn chắc chắn muốn hủy phiếu khám?')"
-                                class="w-full py-2.5 border-2 border-red-200 text-red-500 font-semibold rounded-xl hover:bg-red-50 transition-all text-sm">
-                            Hủy phiếu khám
-                        </button>
-                    </form>
+                <div class="px-6 pb-6 space-y-3">
+                    <!-- Nút IN PHIẾU — luôn hiển thị khi có phiếu -->
+                    <a th:href="@{/tickets/{id}/print(id=${ticket.id})}"
+                       target="_blank"
+                       class="w-full py-3 flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all text-sm">
+                        🖨️ In phiếu khám
+                    </a>
+
+                    <!-- Nút Hủy — chỉ hiện khi đang chờ -->
+                    <div th:if="${ticket.status.name() == 'WAITING'}">
+                        <form th:action="@{/tickets/{id}/cancel(id=${ticket.id})}" method="post">
+                            <button type="submit" onclick="return confirm('Bạn chắc chắn muốn hủy phiếu khám?')"
+                                    class="w-full py-2.5 border-2 border-red-200 text-red-500 font-semibold rounded-xl hover:bg-red-50 transition-all text-sm">
+                                Hủy phiếu khám
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
