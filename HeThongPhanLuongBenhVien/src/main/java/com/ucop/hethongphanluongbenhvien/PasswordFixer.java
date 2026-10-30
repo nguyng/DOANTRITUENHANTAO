@@ -4,10 +4,10 @@ import com.ucop.hethongphanluongbenhvien.entity.User;
 import com.ucop.hethongphanluongbenhvien.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
+// import org.springframework.stereotype.Component;  // DA VO HIEU HOA
 import org.springframework.transaction.annotation.Transactional;
 
-@Component
+// @Component  <- TAT: Chi dung 1 lan khi setup, uncomment neu can reset pass roi tat lai
 public class PasswordFixer implements CommandLineRunner {
 
     private final UserRepository userRepository;

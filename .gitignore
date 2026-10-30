@@ -1,4 +1,4 @@
-﻿# Visual Studio / C#
+# Visual Studio / C#
 .vs/
 bin/
 obj/
@@ -36,3 +36,18 @@ env/
 # Misc
 .DS_Store
 Thumbs.db
+
+# IDE — IntelliJ IDEA (không commit file local, credentials DB)
+.idea/dataSources.local.xml
+.idea/dataSources/
+.idea/workspace.xml
+.idea/copilot.data.migration*.xml
+
+# Scratch / debug files (không thuộc source code chính)
+scratch/
+DBCheck.java
+DBCheck.class
+HashGen.java
+
+# File ghi chú tạm
+*.txt
