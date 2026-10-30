@@ -125,7 +125,7 @@ public class AdminController {
                             @AuthenticationPrincipal UserDetails ud,
                             RedirectAttributes ra) {
         try {
-            userService.findByPhone(ud.getUsername()).ifPresent(faq::setCreatedBy);
+            userService.findByAnyIdentifier(ud.getUsername()).ifPresent(faq::setCreatedBy);
             faqRepository.save(faq);
             ra.addFlashAttribute("success", "Đã thêm câu hỏi mới");
         } catch (Exception e) {

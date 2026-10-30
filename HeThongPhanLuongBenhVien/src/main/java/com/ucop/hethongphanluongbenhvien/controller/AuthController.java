@@ -27,7 +27,7 @@ public class AuthController {
     public String changePasswordPage(Model model,
                                      @AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails != null) {
-            userService.findByPhone(userDetails.getUsername())
+            userService.findByAnyIdentifier(userDetails.getUsername())
                     .ifPresent(u -> model.addAttribute("userName", u.getFullName()));
         }
         return "auth/change-password";
@@ -46,7 +46,7 @@ public class AuthController {
             return "redirect:/change-password";
         }
         try {
-            User user = userService.findByPhone(userDetails.getUsername())
+            User user = userService.findByAnyIdentifier(userDetails.getUsername())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
             userService.changePassword(user.getId(), oldPassword, newPassword);
             ra.addFlashAttribute("success", "Đổi mật khẩu thành công");

@@ -17,12 +17,17 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Controller xử lý Xác thực Bảo Hiểm Y Tế (BHYT).
+ * Controller xu ly Xac thuc Bao Hiem Y Te (BHYT).
+ *
+ * Sau khi chuyen sang dang nhap bang CCCD:
+ *   - SecurityContext luu CCCD cua benh nhan lam username
+ *   - applyBhyt() kiem tra so BHYT nhap vao co khop voi CCCD dang nhap khong
+ *     (moi CCCD chi duoc lien ket voi dung 1 so BHYT trong DB)
  *
  * Endpoints:
- *   GET  /bhyt/check      — Trang kiểm tra BHYT trực tiếp (dành cho bệnh nhân/lễ tân)
- *   POST /api/bhyt/verify — REST API xác thực mã BHYT realtime (AJAX)
- *   POST /api/bhyt/apply  — Áp dụng kết quả xác thực vào hồ sơ bệnh nhân
+ *   GET  /bhyt/check      - Trang kiem tra BHYT truc tiep (danh cho benh nhan/le tan)
+ *   POST /api/bhyt/verify - REST API xac thuc ma BHYT realtime (AJAX)
+ *   POST /api/bhyt/apply  - Ap dung gia giam BHYT khi benh nhan nhap so the
  */
 @Controller
 @RequiredArgsConstructor
@@ -31,10 +36,11 @@ public class BhytController {
     private final BhytVerificationService bhytVerificationService;
     private final UserRepository          userRepository;
 
-    // ── Trang Kiểm Tra BHYT ──────────────────────────────────────────────────────
+    // ======================== Trang Kiem Tra BHYT ========================
 
     /**
-     * Trang tra cứu BHYT — bệnh nhân / lễ tân nhập mã để kiểm tra trực tiếp.
+     * Trang tra cuu BHYT de benh nhan / le tan nhap ma de kiem tra truc tiep.
+     * SecurityContext cua PATIENT hien tai luu CCCD lam username.
      */
     @GetMapping("/bhyt/check")
     public String bhytCheckPage(Model model,
@@ -42,16 +48,18 @@ public class BhytController {
                                 @AuthenticationPrincipal UserDetails ud) {
         model.addAttribute("currentPage", "profile");
 
-        // Nếu có mã trên URL (GET với param) → xử lý luôn
+        // Neu co ma tren URL (GET voi param) -> xu ly luon
         if (maThe != null && !maThe.isBlank()) {
             BhytVerifyResult result = bhytVerificationService.verify(maThe);
             model.addAttribute("result", result);
             model.addAttribute("maThe",  maThe.trim().toUpperCase().replaceAll("\\s+", ""));
         }
 
-        // Điền họ tên user đang đăng nhập
+        // Dien ho ten user dang dang nhap
+        // SecurityContext luu CCCD cho PATIENT, bhytNumber cho nhan vien
         if (ud != null) {
-            userRepository.findByBhytNumber(ud.getUsername())
+            userRepository.findByCccd(ud.getUsername())
+                    .or(() -> userRepository.findByBhytNumber(ud.getUsername()))
                     .or(() -> userRepository.findByPhone(ud.getUsername()))
                     .ifPresent(u -> model.addAttribute("userName", u.getFullName()));
         }
@@ -59,11 +67,11 @@ public class BhytController {
         return "patient/bhyt-check";
     }
 
-    // ── REST API — AJAX realtime ──────────────────────────────────────────────────
+    // ======================== REST API cho AJAX realtime ========================
 
     /**
-     * Xác thực mã BHYT — gọi từ JavaScript (AJAX / fetch).
-     * Trả về JSON kết quả để hiển thị realtime khi người dùng gõ mã.
+     * Xac thuc ma BHYT - goi tu JavaScript (AJAX / fetch).
+     * Tra ve JSON ket qua de hien thi realtime khi nguoi dung ga ma.
      *
      * Request:  POST /api/bhyt/verify
      * Body:     { "maThe": "DN479XXXXXXXXXX" }
@@ -74,13 +82,18 @@ public class BhytController {
     public ResponseEntity<BhytVerifyResult> verifyApi(@RequestBody Map<String, String> body) {
         String maThe = body.getOrDefault("maThe", "").trim();
         BhytVerifyResult result = bhytVerificationService.verify(maThe);
-        // Trả 200 luôn, client tự đọc field "valid" để biết hợp lệ hay không
+        // Tra 200 luon, client tu doc field "valid" de biet hop le hay khong
         return ResponseEntity.ok(result);
     }
 
     /**
-     * Áp dụng kết quả xác thực vào hồ sơ bệnh nhân đang đăng nhập.
-     * Dùng khi bệnh nhân muốn cập nhật mã BHYT vào tài khoản của mình.
+     * Ap dung giam gia BHYT cho lan kham hien tai.
+     * Quy trinh:
+     *   1. Xac thuc dinh dang so BHYT (layer 1 BhytVerificationService)
+     *   2. Tim user hien tai dang dang nhap qua CCCD (SecurityContext)
+     *   3. Kiem tra so BHYT nhap vao co KHOP voi so BHYT da lien ket voi CCCD nay khong
+     *      -> Neu khop: ap dung giam gia
+     *      -> Neu khong khop: tu choi (tranh gian lan BHYT)
      *
      * Request:  POST /api/bhyt/apply
      * Body:     { "maThe": "DN479XXXXXXXXXX" }
@@ -94,36 +107,54 @@ public class BhytController {
 
         if (ud == null) {
             return ResponseEntity.status(401)
-                    .body(Map.of("success", false, "message", "Chưa đăng nhập"));
+                    .body(Map.of("success", false, "message", "Chua dang nhap"));
         }
 
         String maThe = body.getOrDefault("maThe", "").trim();
-        BhytVerifyResult result = bhytVerificationService.verify(maThe);
 
+        // Buoc 1: Xac thuc dinh dang so BHYT
+        BhytVerifyResult result = bhytVerificationService.verify(maThe);
         if (!result.valid()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", result.errorMessage()));
         }
 
-        // Tìm user hiện tại
-        Optional<User> userOpt = userRepository.findByBhytNumber(ud.getUsername())
-                .or(() -> userRepository.findByPhone(ud.getUsername()));
+        // Buoc 2: Tim user hien tai qua CCCD (SecurityContext luu CCCD cho PATIENT)
+        Optional<User> userOpt = userRepository.findByCccd(ud.getUsername())
+                .or(() -> userRepository.findByPhone(ud.getUsername()))
+                .or(() -> userRepository.findByBhytNumber(ud.getUsername()));
 
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(404)
-                    .body(Map.of("success", false, "message", "Không tìm thấy tài khoản"));
+                    .body(Map.of("success", false, "message", "Khong tim thay tai khoan"));
         }
 
         User user = userOpt.get();
 
-        // Áp dụng thông tin BHYT vào hồ sơ
-        user.setBhytNumber(result.maThe());
+        // Buoc 3: Kiem tra so huu BHYT
+        // Moi CCCD chi duoc su dung dung so BHYT lien ket trong DB
+        // Neu user chua co BHYT (bhytNumber == null): tu choi, phai dang ky qua admin truoc
+        // Neu user da co BHYT: so sanh voi ma the nhap vao
+        String existingBhyt = user.getBhytNumber();
+        if (existingBhyt == null || existingBhyt.isBlank()) {
+            return ResponseEntity.status(403)
+                    .body(Map.of("success", false,
+                            "message", "CCCD nay chua duoc lien ket voi so BHYT nao. Vui long lien he admin."));
+        }
+
+        if (!existingBhyt.equalsIgnoreCase(result.maThe())) {
+            return ResponseEntity.status(403)
+                    .body(Map.of("success", false,
+                            "message", "So BHYT khong khop voi CCCD dang dang nhap. Khong the ap dung giam gia."));
+        }
+
+        // Buoc 4: Cap nhat thong tin BHYT (han su dung, muc huong, v.v.)
         bhytVerificationService.applyVerifyResult(user, result);
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of(
                 "success",      true,
-                "message",      "Đã cập nhật thông tin BHYT thành công",
+                "message",      "Da xac nhan BHYT thanh cong. Giam gia se duoc ap dung.",
                 "maThe",        result.maThe(),
                 "tenDoiTuong",  result.tenDoiTuong(),
                 "mucHuong",     result.mucHuong(),

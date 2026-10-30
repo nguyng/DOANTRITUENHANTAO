@@ -38,6 +38,14 @@ public class UserService {
         return userRepository.findByCccd(cccd);
     }
 
+    public Optional<User> findByAnyIdentifier(String identifier) {
+        if (identifier == null || identifier.isBlank()) return Optional.empty();
+        return userRepository.findByCccd(identifier)
+                .or(() -> userRepository.findByBhytNumber(identifier))
+                .or(() -> userRepository.findByPhone(identifier))
+                .or(() -> userRepository.findByEmail(identifier));
+    }
+
     public List<User> findNursesByDepartment(UUID departmentId) {
         return userRepository.findByDepartmentIdAndRole(departmentId, User.Role.NURSE);
     }

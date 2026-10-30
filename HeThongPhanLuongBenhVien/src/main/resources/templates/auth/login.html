@@ -24,7 +24,7 @@
         <!-- Card -->
         <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/50">
             <h2 class="text-xl font-bold text-slate-800 mb-1">Đăng nhập</h2>
-            <p class="text-sm text-slate-500 mb-6">Sử dụng Mã BHYT và mật khẩu để truy cập</p>
+            <p class="text-sm text-slate-500 mb-6">Bệnh nhân đăng nhập bằng số CCCD</p>
 
             <!-- Error message -->
             <div th:if="${param.error}" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
@@ -36,10 +36,10 @@
             <form th:action="@{/login}" method="post" class="space-y-4">
                 <!-- Mã BHYT -->
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Mã BHYT / Tài khoản</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Số CCCD / Tài khoản</label>
                     <div class="relative">
                         <i data-lucide="credit-card" class="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                        <input type="text" name="username" required placeholder="VD: HN47900000001"
+                        <input type="text" name="username" required placeholder="VD: 079204012345"
                                class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm">
                     </div>
                 </div>
@@ -75,7 +75,7 @@
             <div class="bg-blue-50 rounded-xl p-4 space-y-2">
                 <div class="flex items-start gap-2">
                     <i data-lucide="info" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>
-                    <p class="text-xs text-slate-600"><strong>Bệnh nhân:</strong> Đăng nhập bằng mã số trên thẻ BHYT.</p>
+                    <p class="text-xs text-slate-600"><strong>Bệnh nhân:</strong> Đăng nhập bằng số CCCD (12 chữ số).</p>
                 </div>
                 <div class="flex items-start gap-2">
                     <i data-lucide="info" class="w-4 h-4 text-primary mt-0.5 flex-shrink-0"></i>

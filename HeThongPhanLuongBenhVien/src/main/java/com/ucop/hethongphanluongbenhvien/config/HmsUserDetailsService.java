@@ -13,13 +13,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * Triển khai UserDetailsService để Spring Security tải thông tin user từ DB.
+ * Trien khai UserDetailsService de Spring Security tai thong tin user tu DB.
  *
- * Thứ tự tra cứu username:
- *   1. Số điện thoại  (phone)   — ưu tiên nhất (nhân viên & bệnh nhân)
- *   2. Số BHYT        (bhytNumber)
- *   3. CCCD           (cccd)
+ * Thu tu tra cuu username (ho tro ca benh nhan lan nhan vien):
+ *   1. So CCCD        (cccd)      - Benh nhan dang nhap bang CCCD
+ *   2. So dien thoai  (phone)
+ *   3. So BHYT        (bhytNumber)
  *   4. Email          (email)
+ *
+ * Username luu vao SecurityContext:
+ *   - PATIENT: CCCD (de kiem tra so huu BHYT)
+ *   - NURSE/DOCTOR/ADMIN: bhytNumber (ma nhan vien)
  */
 @Service
 @RequiredArgsConstructor
@@ -30,29 +34,32 @@ public class HmsUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByPhone(username)
+        User user = userRepository.findByCccd(username)
+                .or(() -> userRepository.findByPhone(username))
                 .or(() -> userRepository.findByBhytNumber(username))
-                .or(() -> userRepository.findByCccd(username))
                 .or(() -> userRepository.findByEmail(username))
                 .orElseThrow(() -> new UsernameNotFoundException(
-                        "Không tìm thấy tài khoản: " + username));
+                        "Khong tim thay tai khoan: " + username));
 
         if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new UsernameNotFoundException("Tài khoản đã bị khóa: " + username);
+            throw new UsernameNotFoundException("Tai khoan da bi khoa: " + username);
         }
 
-        // Chuyển Role thành GrantedAuthority — Spring Security dùng tiền tố "ROLE_"
+        // Chuyen Role thanh GrantedAuthority - Spring Security dung tien to "ROLE_"
         String authority = "ROLE_" + user.getRole().name(); // VD: ROLE_PATIENT, ROLE_NURSE, ROLE_ADMIN
 
-        // Nhân viên (NURSE/DOCTOR/ADMIN) đăng nhập bằng bhytNumber → trả về bhytNumber làm username
-        // Bệnh nhân đăng nhập bằng phone hoặc bhytNumber → ưu tiên phone
+        // Benh nhan (PATIENT) dang nhap bang CCCD -> luu CCCD vao SecurityContext
+        //   de controller co the tim user bang findByCccd(ud.getUsername())
+        //   va kiem tra so huu BHYT (user.cccd phai khop voi BHYT dang ky)
+        // Nhan vien (NURSE/DOCTOR/ADMIN) dang nhap bang bhytNumber (ma nhan vien)
         String resolvedUsername;
         if (user.getRole() == User.Role.PATIENT) {
-            resolvedUsername = user.getPhone() != null ? user.getPhone()
-                    : user.getBhytNumber() != null ? user.getBhytNumber()
-                    : user.getCccd();
+            // Uu tien CCCD lam username chinh cua benh nhan
+            resolvedUsername = user.getCccd() != null ? user.getCccd()
+                    : user.getPhone() != null ? user.getPhone()
+                    : user.getBhytNumber();
         } else {
-            // NURSE, DOCTOR, ADMIN — dùng bhytNumber (mã nhân viên)
+            // NURSE, DOCTOR, ADMIN - dung bhytNumber (ma nhan vien)
             resolvedUsername = user.getBhytNumber() != null ? user.getBhytNumber()
                     : user.getPhone() != null ? user.getPhone()
                     : user.getCccd();
