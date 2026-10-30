@@ -59,7 +59,6 @@ public class ChatService {
 
     // ======================== Session ========================
 
-    /** Tao phien chat moi khi benh nhan mo trang /chat */
     @Transactional
     public ChatSession startSession(User patient) {
         ChatSession session = ChatSession.builder()
@@ -86,10 +85,6 @@ public class ChatService {
 
     // ======================== Nhan tin ========================
 
-    /**
-     * Benh nhan gui tin - tu dong goi Local AI (Ollama qwen2.5-coder:3b) roi luu ca 2 tin (USER + BOT).
-     * @return tin nhan tra loi cua BOT
-     */
     @Transactional
     public ChatSendResult sendMessage(UUID sessionId, String userText) {
         ChatSession session = findSessionById(sessionId);
@@ -102,9 +97,10 @@ public class ChatService {
                 .build();
         chatMessageRepository.save(userMsg);
 
-        // 2. Goi Local AI Ollama va do thoi gian xu ly
+        // 2. Goi Local AI va do thoi gian
         long startTime = System.currentTimeMillis();
-        AiResponse aiResult = callAiService(userText, sessionId.toString(), getHistory(sessionId));
+        List<Map<String, String>> history = getHistory(sessionId);
+        AiResponse aiResult = callAiService(userText, sessionId.toString(), history);
         int processingMs = (int) (System.currentTimeMillis() - startTime);
 
         // 3. Luu tin nhan cua BOT
@@ -116,7 +112,7 @@ public class ChatService {
                 .build();
         botMsg = chatMessageRepository.save(botMsg);
 
-        // 4. Chuan bi ket qua phan luong (neu co)
+        // 4. Chuan bi ket qua phan luong (neu AI da thu thap du thong tin mau chot)
         TriageResult triageResult = null;
         if (aiResult.hasTriageResult() && aiResult.triageRaw() != null) {
             Map<String, Object> t = aiResult.triageRaw();
@@ -151,7 +147,7 @@ public class ChatService {
                         advice
                 );
 
-                // Luu log phan tich vao AI_ANALYSIS_LOGS de Admin co the theo doi tren /admin/logs
+                // Luu vao nhat ky AI
                 try {
                     AiAnalysisLog logEntity = AiAnalysisLog.builder()
                             .message(botMsg)
@@ -184,10 +180,6 @@ public class ChatService {
                 .toList();
     }
 
-    /**
-     * Benh nhan xac nhan dang ky sau khi AI de xuat phan luong.
-     * Tao Ticket chinh thuc va gan vao session.
-     */
     @Transactional
     public Ticket confirmRegistration(UUID sessionId, UUID departmentId,
                                       Ticket.Priority priority, String aiSummary, Integer confidence) {
@@ -202,7 +194,7 @@ public class ChatService {
         session.setEndedAt(LocalDateTime.now());
         chatSessionRepository.save(session);
 
-        // Luu tin SYSTEM thong bao hoan tat
+        // Luu tin SYSTEM
         ChatMessage sysMsg = ChatMessage.builder()
                 .session(session)
                 .senderRole(ChatMessage.SenderRole.SYSTEM)
@@ -213,65 +205,103 @@ public class ChatService {
         return ticket;
     }
 
-    // ======================== Goi Local AI (Ollama) ========================
+    // ======================== Multi-Turn Clinical Triage Prompts ========================
 
-    private static final String SYSTEM_PROMPT = """
-            Bạn là Trợ lý Y tế AI tiếp đón của Bệnh viện MedAssist.
-            Nhiệm vụ: Lắng nghe bệnh nhân mô tả triệu chứng, trả lời ân cần, giải thích và phân luồng vào đúng chuyên khoa của bệnh viện.
+    /**
+     * PROMPT GIAI DOAN 1: Khai thac chuyen sau trieu chung mau chot de phan biet benh.
+     * Bat buoc khong duoc chot khoa voi vang. Phai dat tu 2 den 3 cau hoi phan biet.
+     */
+    private static final String SYSTEM_PROMPT_PROBE = """
+            Bạn là Trợ Lý Tiếp Đón & Phân Luồng Phòng Khám của Bệnh viện MedAssist.
+            Mục tiêu: Đảm bảo phân luồng vào ĐÚNG CHUYÊN KHOA với độ chính xác cao nhất.
+            Rất nhiều căn bệnh có triệu chứng giống nhau (Ví dụ: đau ngực có thể do Tim mạch, Hô hấp, Tiêu hóa hoặc Cơ xương khớp; đau đầu có thể do Thần kinh, Huyết áp hoặc Xoang; đau bụng có thể do Tiêu hóa, Cấp cứu hoặc Phụ khoa).
 
-            DANH SÁCH MÃ CHUYÊN KHOA BẮT BUỘC CHỌN:
-            1. KTIEUHOA: Đau dạ dày, đau bụng, buồn nôn, tiêu chảy, ợ chua, trào ngược, ngộ độc thức ăn, táo bón.
-            2. KHOHAP: Ho có đờm, ho khan, viêm phế quản, viêm phổi, khó thở, sốt kèm ho.
-            3. KTMH: Đau rát họng, ngứa họng, viêm xoang, nghẹt mũi, viêm amidan, ù tai, chảy mủ tai.
-            4. KXUONGKHOP: Đau nhức xương, đau khớp gối, thoái hóa khớp, đau lưng, thoát vị đĩa đệm, mỏi vai gáy.
-            5. KDALIEU: Ngứa da, dị ứng da, nổi mề đay, mẩn đỏ, vảy nến, chàm, mụn nhọt ngoài da.
-            6. KMAT: Đau mắt, đỏ mắt, mờ mắt, cộm ngứa mắt, viêm giác mạc, đo khúc xạ.
-            7. KTIM: Đau tức ngực, hồi hộp, đánh trống ngực, tim đập nhanh, tăng huyết áp, suy tim.
-            8. KTHANKINH: Đau đầu dữ dội, đau nửa đầu, chóng mặt mất thăng bằng, mất ngủ kinh niên, tê bì tay chân.
-            9. KCAPCUU: Bất tỉnh, ngất xỉu, co giật, khó thở dữ dội tím tái, đau ngực dữ dội vã mồ hôi, tai nạn thương tích nặng.
-            10. KNHI: Tất cả bệnh nhân là trẻ em dưới 16 tuổi.
-            11. KSAN: Khám thai, phụ khoa, rối loạn kinh nguyệt.
+            NGUYÊN TẮC BẮT BUỘC Ở BƯỚC NÀY:
+            1. TUYỆT ĐỐI CHƯA CHỐT KHOA KHÁM (Bắt buộc: has_triage_result = false, triage = null).
+            2. Trong `reply`: Lắng nghe ân cần và đặt từ 2 đến 3 câu hỏi lâm sàng THEN CHỐT để thu thập TRIỆU CHỨNG MẤU CHỐT:
+               - Vị trí cụ thể và tính chất cảm giác (đau nhói khi hít thở, nóng rát hay đè nặng lồng ngực; đau quặn từng cơn hay âm ỉ)?
+               - Hoàn cảnh xuất hiện hoặc yếu tố tăng/giảm (khi hít thở sâu, khi vận động gắng sức, sau khi ăn no, hay khi xoay vặn người)?
+               - Triệu chứng đi kèm (sốt, ho có đờm, khó thở, vã mồ hôi, ợ chua, buồn nôn, tê bì tay chân)?
+               - Thời gian kéo dài bao lâu (mới xuất hiện vài giờ, vài ngày hay đã lâu)?
 
-            MỨC ĐỘ ƯU TIÊN (priority):
-            - M1: Cấp cứu ngay (đe dọa tính mạng)
-            - M2: Khẩn cấp (triệu chứng nặng, sốt cao > 39 độ, đau dữ dội)
-            - M3: Ưu tiên (triệu chứng rõ ràng cần khám trong ngày)
-            - M4: Thông thường (triệu chứng nhẹ, ổn định)
-            - M5: Không khẩn (khám sức khỏe định kỳ)
-
-            QUY TẮC PHẢN HỒI:
-            - Nếu chỉ chào hỏi hoặc chưa có triệu chứng bệnh: has_triage_result = false, triage = null, reply ân cần hỏi thêm triệu chứng.
-            - Nếu có triệu chứng bệnh: has_triage_result = true, triage bắt buộc chứa:
-              + department_code: một trong các mã chính xác ở trên (KTIEUHOA, KHOHAP, KTMH, KXUONGKHOP, KDALIEU, KMAT, KTIM, KTHANKINH, KCAPCUU, KNHI, KSAN)
-              + priority: M1/M2/M3/M4/M5
-              + confidence: số nguyên 75 - 98
-              + summary: tóm tắt triệu chứng ngắn gọn
-              + advice: lời khuyên chăm sóc ban đầu
-
-            BẮT BUỘC TRẢ VỀ DUY NHẤT 1 ĐỐI TƯỢNG JSON:
+            CHỈ TRẢ VỀ DUY NHẤT ĐỐI TƯỢNG JSON:
             {
-              "reply": "câu trả lời ân cần cho bệnh nhân",
-              "has_triage_result": true/false,
+              "reply": "câu hỏi khai thác triệu chứng mấu chốt ân cần, súc tích",
+              "has_triage_result": false,
+              "triage": null
+            }
+            """;
+
+    /**
+     * PROMPT GIAI DOAN 2: Tong hop cac trieu chung mau chot da thu thap va ra quyet dinh phan luong chinh xac.
+     */
+    private static final String SYSTEM_PROMPT_DECISION = """
+            Bạn là Trợ Lý Tiếp Đón & Phân Luồng Phòng Khám của Bệnh viện MedAssist.
+            Bệnh nhân đã cung cấp thông tin chi tiết qua các câu hỏi làm rõ. Bây giờ hãy TỔNG HỢP CÁC TRIỆU CHỨNG MẤU CHỐT và RA QUYẾT ĐỊNH PHÂN LUỒNG CHÍNH XÁC.
+
+            DANH MỤC 11 CHUYÊN KHOA BẮT BUỘC CHỌN:
+            - KTIM: Tim mạch (đau thắt ngực khi gắng sức/lan cánh tay, hồi hộp, tim đập nhanh, tăng huyết áp)
+            - KHOHAP: Hô hấp (đau nhói ngực tăng khi ho/hít sâu, ho có đờm, ho khan kéo dài, sốt kèm ho, viêm phế quản/phổi)
+            - KTIEUHOA: Tiêu hóa (cảm giác nóng rát sau xương ức sau ăn/nằm, ợ chua, trào ngược, đau dạ dày, đau bụng, buồn nôn, tiêu chảy)
+            - KXUONGKHOP: Xương khớp (đau thành ngực/sụn sườn tăng khi ấn hoặc xoay người, đau khớp gối, thoái hóa khớp, đau lưng)
+            - KTMH: Tai Mũi Họng (đau rát họng khi nuốt, nghẹt mũi, viêm xoang, amidan, ù tai)
+            - KDALIEU: Da liễu (ngứa da, mề đay, mẩn đỏ, dị ứng ngoài da)
+            - KMAT: Mắt (đau mắt, đỏ mắt, mờ mắt, cộm ngứa mắt)
+            - KTHANKINH: Thần kinh (đau đầu dữ dội, chóng mặt tiền đình, mất ngủ mạn tính, tê yếu nửa người)
+            - KCAPCUU: Cấp cứu (bất tỉnh, ngạt thở, đau ngực dữ dội kèm vã mồ hôi, co giật, tai nạn nặng)
+            - KNHI: Trẻ em dưới 16 tuổi (mọi triệu chứng ở trẻ em)
+            - KSAN: Sản phụ khoa (khám thai, phụ khoa, rối loạn kinh nguyệt)
+
+            MỨC ĐỘ ƯU TIÊN:
+            - M1: Cấp cứu ngay (đe dọa tính mạng)
+            - M2: Khẩn cấp (sốt rất cao > 39 độ, đau nhiều)
+            - M3: Ưu tiên (triệu chứng rõ ràng cần khám trong ngày)
+            - M4: Thông thường (triệu chứng nhẹ, bệnh mạn tính)
+            - M5: Không khẩn (khám định kỳ)
+
+            YÊU CẦU ĐẦU RA:
+            1. has_triage_result = true
+            2. Điền đầy đủ triage:
+               - department_code: mã khoa phù hợp nhất trong 11 mã trên
+               - priority: M1/M2/M3/M4/M5
+               - confidence: số nguyên 85-98
+               - summary: tóm tắt ngắn gọn các triệu chứng mấu chốt đã thu thập được
+               - advice: lời dặn chuẩn bị trước khi vào phòng khám
+            3. Trong `reply`: Nêu rõ các triệu chứng mấu chốt đã giúp hệ thống quyết định đưa vào chuyên khoa này.
+
+            CHỈ TRẢ VỀ DUY NHẤT ĐỐI TƯỢNG JSON:
+            {
+              "reply": "Dựa trên các triệu chứng mấu chốt bạn chia sẻ (...), hệ thống hướng dẫn bạn đăng ký tại chuyên khoa (...)",
+              "has_triage_result": true,
               "triage": {
                 "department_code": "MÃ_KHOA",
-                "priority": "M1|M2|M3|M4|M5",
-                "confidence": 85,
-                "summary": "tóm tắt",
-                "advice": "lời khuyên"
+                "priority": "M3",
+                "confidence": 92,
+                "summary": "tóm tắt triệu chứng mấu chốt",
+                "advice": "lời dặn trước khi khám"
               }
             }
             """;
 
     private AiResponse callAiService(String userText, String sessionId, List<Map<String, String>> history) {
         try {
+            // 1. Kiem tra co do Cap cuu nguy kich (Red Flag)
+            if (isEmergencyRedFlag(userText)) {
+                return emergencyResponse(userText);
+            }
+
+            // 2. Xac dinh giai doan hoi thoai:
+            // - Neu history.size() < 2 (moi la luot dau tien) va mo ta chua qua day du -> Giai doan 1 (Khai thac trieu chung mau chot)
+            // - Neu history.size() >= 2 (benh nhan da tra loi cau hoi lam ro) hoac da mo ta rat chi tiet (> 120 ky tu) -> Giai doan 2 (Tong hop va chot khoa)
+            boolean isInitialBrief = history.size() < 2 && !isVeryDetailed(userText);
+            String selectedSystemPrompt = isInitialBrief ? SYSTEM_PROMPT_PROBE : SYSTEM_PROMPT_DECISION;
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            // Xay dung danh sach message cho Ollama chat API
             List<Map<String, String>> messages = new ArrayList<>();
-            messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT));
+            messages.add(Map.of("role", "system", "content", selectedSystemPrompt));
 
-            // Lay toi da 6 tin nhan gan nhat de giu ngu canh
             int startIdx = Math.max(0, history.size() - 6);
             for (int i = startIdx; i < history.size(); i++) {
                 messages.add(history.get(i));
@@ -283,7 +313,10 @@ public class ChatService {
             body.put("messages", messages);
             body.put("format", "json");
             body.put("stream", false);
-            body.put("options", Map.of("temperature", 0.1));
+            body.put("options", Map.of(
+                    "temperature", 0.1,
+                    "num_predict", 350
+            ));
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
             String url = aiServiceUrl.replaceAll("/+$", "") + "/api/chat";
@@ -294,18 +327,17 @@ public class ChatService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> data = (Map<String, Object>) response.getBody();
 
-                // Ollama tra ve: { "message": { "role": "assistant", "content": "{...}" } }
                 @SuppressWarnings("unchecked")
                 Map<String, Object> msg = (Map<String, Object>) data.get("message");
                 if (msg != null && msg.containsKey("content")) {
                     String contentStr = String.valueOf(msg.get("content")).trim();
 
-                    // Parse JSON ben trong content cua LLM
+                    // Parse JSON tra ve tu LLM
                     Map<String, Object> parsed = objectMapper.readValue(
                             contentStr, new TypeReference<Map<String, Object>>() {});
 
                     String reply = String.valueOf(parsed.getOrDefault(
-                            "reply", "Tôi đã ghi nhận triệu chứng của bạn và đề xuất phân luồng khám bệnh."));
+                            "reply", "Tôi đã ghi nhận thông tin của bạn."));
                     boolean hasTriage = Boolean.TRUE.equals(parsed.get("has_triage_result"));
 
                     @SuppressWarnings("unchecked")
@@ -318,60 +350,96 @@ public class ChatService {
             log.error("Lỗi khi kết nối Local AI Ollama ({}) tại {}: {}", aiModelName, aiServiceUrl, e.getMessage());
         }
 
-        // Fallback khi Ollama offline hoac chua khoi dong
-        return fallbackResponse(userText);
+        // Fallback an toan khi Ollama offline
+        return fallbackResponse(userText, history);
     }
 
-    private AiResponse fallbackResponse(String userText) {
-        String lower = userText.toLowerCase();
-        boolean hasSymptom = lower.contains("đau") || lower.contains("sốt") || lower.contains("ho")
-                || lower.contains("mệt") || lower.contains("khó thở") || lower.contains("ngứa")
-                || lower.contains("bệnh") || lower.contains("khám");
+    private boolean isEmergencyRedFlag(String text) {
+        String lower = text.toLowerCase();
+        return lower.contains("bất tỉnh") || lower.contains("ngất") || lower.contains("co giật")
+                || lower.contains("ngừng thở") || lower.contains("tím tái") || lower.contains("hôn mê")
+                || (lower.contains("đau ngực") && lower.contains("vã mồ hôi"))
+                || (lower.contains("nôn") && lower.contains("ra máu"))
+                || lower.contains("tai nạn") || lower.contains("mất máu nhiều");
+    }
 
-        if (!hasSymptom) {
-            return new AiResponse("Xin chào! Tôi là Trợ lý Y tế AI của bệnh viện. Bạn đang gặp triệu chứng khó chịu gì? Hãy mô tả để tôi hỗ trợ phân luồng khám bệnh nhé.", false, null);
+    private boolean isVeryDetailed(String text) {
+        // Neu benh nhan da chu dong mo ta day du tu dau (> 120 ky tu va co tu noi trieu chung)
+        String lower = text.toLowerCase();
+        int countMarkers = 0;
+        if (lower.contains("kèm") || lower.contains("và") || lower.contains("từ hôm") || lower.contains("khi")) countMarkers++;
+        if (lower.contains("đau") || lower.contains("sốt") || lower.contains("ho") || lower.contains("rát")) countMarkers++;
+        return text.length() > 120 && countMarkers >= 2;
+    }
+
+    private AiResponse emergencyResponse(String userText) {
+        Map<String, Object> triage = new HashMap<>();
+        triage.put("department_code", "KCAPCUU");
+        triage.put("priority", "M1");
+        triage.put("confidence", 99);
+        triage.put("summary", "CẢNH BÁO NGUY CẤP: " + userText);
+        triage.put("advice", "Di chuyển ngay lập tức vào Khoa Cấp Cứu tại cổng chính Bệnh viện.");
+
+        return new AiResponse("CẢNH BÁO: Tình trạng của bạn có dấu hiệu nguy kịch cần được bác sĩ xử trí ngay lập tức! Vui lòng vào thẳng Khoa Cấp Cứu hoặc nhờ người nhà hỗ trợ gấp.", true, triage);
+    }
+
+    private AiResponse fallbackResponse(String userText, List<Map<String, String>> history) {
+        String lower = userText.toLowerCase();
+
+        // Neu moi la cau chao hoi
+        if (history.isEmpty() && (lower.contains("chào") || lower.contains("hello") || lower.length() < 15)) {
+            return new AiResponse("Xin chào bạn! Tôi là Trợ lý Y tế AI tiếp đón của Bệnh viện MedAssist. Bạn đang gặp những triệu chứng khó chịu nào? Hãy mô tả cụ thể để tôi hỗ trợ nhé.", false, null);
         }
 
-        // Heuristic fallback don gian dua tren tu khoa
-        String dept = "KHOA_NOI";
-        if (lower.contains("bụng") || lower.contains("dạ dày") || lower.contains("nôn") || lower.contains("tiêu chảy")) {
+        // Neu la luot dau va chua du thong tin -> dat cau hoi khai thac them
+        if (history.size() < 2 && !isVeryDetailed(userText)) {
+            if (lower.contains("ngực")) {
+                return new AiResponse("Cơn đau ngực của bạn có cảm giác như thế nào (đau nhói khi hít thở, nóng rát sau xương ức, hay đè nặng lồng ngực)? Cơn đau có lan đi đâu và có kèm sốt, ho đờm hay khó thở không?", false, null);
+            } else if (lower.contains("bụng")) {
+                return new AiResponse("Bạn đau ở vị trí nào của bụng (thượng vị gần ức, quanh rốn, hay bụng dưới)? Cơn đau quặn từng cơn hay âm ỉ, có kèm buồn nôn, ợ chua hay tiêu chảy không?", false, null);
+            } else if (lower.contains("đầu") || lower.contains("chóng mặt")) {
+                return new AiResponse("Cơn chóng mặt của bạn có cảm giác nhà cửa quay cuồng không? Đau đầu ở vùng nào (nửa đầu, trán hay sau gáy), có kèm buồn nôn, mất ngủ hay tê bì tay chân không?", false, null);
+            } else {
+                return new AiResponse("Bạn có thể chia sẻ thêm: Triệu chứng này xuất hiện từ khi nào? Có cảm giác tăng lên khi nào và có đi kèm sốt hay triệu chứng bất thường nào khác không?", false, null);
+            }
+        }
+
+        // Luot thu 2 tro di: Tong hop phan luong
+        String dept = "KHOHAP";
+        if (lower.contains("bụng") || lower.contains("dạ dày") || lower.contains("nôn") || lower.contains("tiêu chảy") || lower.contains("ợ chua") || lower.contains("nóng rát")) {
             dept = "KTIEUHOA";
-        } else if (lower.contains("ho") || lower.contains("phổi") || lower.contains("đờm") || lower.contains("thở")) {
+        } else if (lower.contains("ho") || lower.contains("phổi") || lower.contains("đờm") || lower.contains("hít sâu")) {
             dept = "KHOHAP";
-        } else if (lower.contains("họng") || lower.contains("xoang") || lower.contains("tai") || lower.contains("mũi")) {
+        } else if (lower.contains("họng") || lower.contains("xoang") || lower.contains("tai") || lower.contains("mũi") || lower.contains("amidan")) {
             dept = "KTMH";
-        } else if (lower.contains("xương") || lower.contains("khớp") || lower.contains("lưng") || lower.contains("gối")) {
+        } else if (lower.contains("xương") || lower.contains("khớp") || lower.contains("lưng") || lower.contains("gối") || lower.contains("sụn sườn")) {
             dept = "KXUONGKHOP";
         } else if (lower.contains("da") || lower.contains("ngứa") || lower.contains("mẩn") || lower.contains("dị ứng")) {
             dept = "KDALIEU";
         } else if (lower.contains("mắt") || lower.contains("nhìn")) {
             dept = "KMAT";
-        } else if (lower.contains("ngực") || lower.contains("tim") || lower.contains("huyết áp")) {
+        } else if (lower.contains("ngực") || lower.contains("tim") || lower.contains("huyết áp") || lower.contains("hồi hộp")) {
             dept = "KTIM";
-        } else if (lower.contains("đầu") || lower.contains("chóng mặt") || lower.contains("ngủ")) {
+        } else if (lower.contains("đầu") || lower.contains("chóng mặt") || lower.contains("ngủ") || lower.contains("tê bì")) {
             dept = "KTHANKINH";
         }
 
         Map<String, Object> triage = new HashMap<>();
         triage.put("department_code", dept);
         triage.put("priority", "M3");
-        triage.put("confidence", 80);
-        triage.put("summary", "Đăng ký khám theo triệu chứng: " + userText);
-        triage.put("advice", "Vui lòng giữ gìn sức khỏe và đến phòng khám theo chỉ dẫn.");
+        triage.put("confidence", 85);
+        triage.put("summary", "Đăng ký khám theo triệu chứng mấu chốt: " + userText);
+        triage.put("advice", "Vui lòng giữ gìn sức khỏe và di chuyển đến phòng khám theo chỉ dẫn.");
 
-        return new AiResponse("Dựa trên mô tả triệu chứng của bạn, tôi đề xuất bạn đăng ký khám tại chuyên khoa phù hợp dưới đây.", true, triage);
+        return new AiResponse("Dựa trên các triệu chứng mấu chốt bạn đã chia sẻ, hệ thống hướng dẫn bạn đăng ký tại chuyên khoa phù hợp dưới đây để bác sĩ chuyên khoa kiểm tra trực tiếp.", true, triage);
     }
 
-    /**
-     * Chuan hoa va sua loi ma khoa (neu LLM sinh ra ma alias nhu KHOA_HOHAP, HOHAP...)
-     */
     private String normalizeDeptCode(String code, String userText) {
         if (code == null) return "KHOHAP";
         String c = code.trim().toUpperCase().replace("KHOA_", "").replace("KHOA", "");
 
-        // Kiem tra tu khoa de phong ngua LLM nham lan
         String lowerText = userText.toLowerCase();
-        if ((lowerText.contains("bụng") || lowerText.contains("dạ dày") || lowerText.contains("tiêu chảy"))
+        if ((lowerText.contains("bụng") || lowerText.contains("dạ dày") || lowerText.contains("tiêu chảy") || lowerText.contains("ợ chua") || lowerText.contains("trào ngược"))
                 && !c.contains("TIEUHOA")) {
             return "KTIEUHOA";
         }
@@ -396,11 +464,9 @@ public class ChatService {
         try {
             return departmentService.findByCode(deptCode);
         } catch (Exception e) {
-            // Neu ma khoa chua co tien to K
             try {
                 return departmentService.findByCode("K" + deptCode);
             } catch (Exception e2) {
-                // Lay khoa hoat dong dau tien lam fallback
                 List<Department> active = departmentService.findActive();
                 if (!active.isEmpty()) {
                     return active.get(0);
