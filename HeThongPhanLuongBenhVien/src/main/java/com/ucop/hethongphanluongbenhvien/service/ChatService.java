@@ -1,12 +1,11 @@
 package com.ucop.hethongphanluongbenhvien.service;
 
-import com.ucop.hethongphanluongbenhvien.entity.ChatMessage;
-import com.ucop.hethongphanluongbenhvien.entity.ChatSession;
-import com.ucop.hethongphanluongbenhvien.entity.Ticket;
-import com.ucop.hethongphanluongbenhvien.entity.User;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import com.ucop.hethongphanluongbenhvien.entity.*;
+import com.ucop.hethongphanluongbenhvien.repository.AiAnalysisLogRepository;
 import com.ucop.hethongphanluongbenhvien.repository.ChatMessageRepository;
 import com.ucop.hethongphanluongbenhvien.repository.ChatSessionRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -14,11 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -31,28 +28,38 @@ public class ChatService {
     private final UserService userService;
     private final DepartmentService departmentService;
     private final RestTemplate restTemplate;
+    private final AiAnalysisLogRepository aiAnalysisLogRepository;
+    private final ObjectMapper objectMapper;
 
     public ChatService(ChatSessionRepository chatSessionRepository,
                        ChatMessageRepository chatMessageRepository,
                        TicketService ticketService,
                        UserService userService,
                        DepartmentService departmentService,
-                       RestTemplate restTemplate) {
+                       RestTemplate restTemplate,
+                       AiAnalysisLogRepository aiAnalysisLogRepository,
+                       ObjectMapper objectMapper) {
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.ticketService = ticketService;
         this.userService = userService;
         this.departmentService = departmentService;
         this.restTemplate = restTemplate;
+        this.aiAnalysisLogRepository = aiAnalysisLogRepository;
+        this.objectMapper = objectMapper;
     }
 
-    /** URL FastAPI AI service — cấu hình trong application.properties */
-    @Value("${ai.service.url:http://localhost:8000}")
+    /** URL Ollama AI service - cau hinh trong application.properties */
+    @Value("${ai.service.url:http://localhost:11434}")
     private String aiServiceUrl;
 
-    // ── Session ─────────────────────────────────────────────────────────────────
+    /** Ten model Ollama dang dung */
+    @Value("${ai.model.name:qwen2.5-coder:3b}")
+    private String aiModelName;
 
-    /** Tạo phiên chat mới khi bệnh nhân mở trang /chat */
+    // ======================== Session ========================
+
+    /** Tao phien chat moi khi benh nhan mo trang /chat */
     @Transactional
     public ChatSession startSession(User patient) {
         ChatSession session = ChatSession.builder()
@@ -70,24 +77,24 @@ public class ChatService {
 
     public ChatSession findSessionById(UUID id) {
         return chatSessionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Session không tồn tại: " + id));
+                .orElseThrow(() -> new RuntimeException("Session khong ton tai: " + id));
     }
 
     public List<ChatMessage> getMessages(UUID sessionId) {
         return chatMessageRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
     }
 
-    // ── Nhắn tin ────────────────────────────────────────────────────────────────
+    // ======================== Nhan tin ========================
 
     /**
-     * Bệnh nhân gửi tin — tự động gọi AI rồi lưu cả 2 tin (USER + BOT).
-     * @return tin nhắn trả lời của BOT
+     * Benh nhan gui tin - tu dong goi Local AI (Ollama qwen2.5-coder:3b) roi luu ca 2 tin (USER + BOT).
+     * @return tin nhan tra loi cua BOT
      */
     @Transactional
     public ChatSendResult sendMessage(UUID sessionId, String userText) {
         ChatSession session = findSessionById(sessionId);
 
-        // 1. Lưu tin nhắn của bệnh nhân
+        // 1. Luu tin nhan cua benh nhan
         ChatMessage userMsg = ChatMessage.builder()
                 .session(session)
                 .senderRole(ChatMessage.SenderRole.USER)
@@ -95,34 +102,44 @@ public class ChatService {
                 .build();
         chatMessageRepository.save(userMsg);
 
-        // 2. Gọi AI và lấy phản hồi
+        // 2. Goi Local AI Ollama va do thoi gian xu ly
+        long startTime = System.currentTimeMillis();
         AiResponse aiResult = callAiService(userText, sessionId.toString(), getHistory(sessionId));
+        int processingMs = (int) (System.currentTimeMillis() - startTime);
 
-        // 3. Lưu tin nhắn của BOT
+        // 3. Luu tin nhan cua BOT
         ChatMessage botMsg = ChatMessage.builder()
                 .session(session)
                 .senderRole(ChatMessage.SenderRole.BOT)
                 .content(aiResult.reply())
-                .messageType(aiResult.hasTriageResult() ? ChatMessage.MessageType.TEXT : ChatMessage.MessageType.TEXT)
+                .messageType(ChatMessage.MessageType.TEXT)
                 .build();
         botMsg = chatMessageRepository.save(botMsg);
 
-        // 4. Chuẩn bị kết quả trả về
+        // 4. Chuan bi ket qua phan luong (neu co)
         TriageResult triageResult = null;
         if (aiResult.hasTriageResult() && aiResult.triageRaw() != null) {
             Map<String, Object> t = aiResult.triageRaw();
-            String deptCode = (String) t.get("department_code");
-            String priority = (String) t.getOrDefault("priority", "M3");
-            Integer confidence = t.get("confidence") != null ? ((Number) t.get("confidence")).intValue() : 0;
-            String summary = (String) t.get("summary");
-            String advice = (String) t.get("advice");
+            String rawDeptCode = String.valueOf(t.getOrDefault("department_code", ""));
+            String deptCode = normalizeDeptCode(rawDeptCode, userText);
+            String priority = String.valueOf(t.getOrDefault("priority", "M3"));
+            int confidence = 85;
+            try {
+                if (t.get("confidence") != null) {
+                    confidence = ((Number) t.get("confidence")).intValue();
+                }
+            } catch (Exception ignored) {}
+
+            String summary = String.valueOf(t.getOrDefault("summary", ""));
+            String advice = String.valueOf(t.getOrDefault("advice", ""));
 
             try {
-                var dept = departmentService.findByCode(deptCode);
-                String roomPart = (dept.getRoomNumber() != null && !dept.getRoomNumber().isBlank())
-                        ? " · Phòng " + dept.getRoomNumber() : "";
-                String locPart = (dept.getLocation() != null && !dept.getLocation().isBlank())
-                        ? " · " + dept.getLocation() : "";
+                Department dept = resolveDepartment(deptCode);
+                String roomPart = (dept.getRoomNumbers() != null && !dept.getRoomNumbers().isBlank())
+                        ? " · Phòng " + dept.getRoomNumbers() : "";
+                String locPart = (dept.getBuilding() != null && !dept.getBuilding().isBlank())
+                        ? " · " + dept.getBuilding() : "";
+
                 triageResult = new TriageResult(
                         dept.getId(),
                         dept.getName(),
@@ -133,8 +150,25 @@ public class ChatService {
                         summary,
                         advice
                 );
+
+                // Luu log phan tich vao AI_ANALYSIS_LOGS de Admin co the theo doi tren /admin/logs
+                try {
+                    AiAnalysisLog logEntity = AiAnalysisLog.builder()
+                            .message(botMsg)
+                            .aiModelUsed(aiModelName)
+                            .inputText(userText)
+                            .predictedDept(dept.getName() + " (" + dept.getCode() + ")")
+                            .confidenceScore(BigDecimal.valueOf(confidence).divide(BigDecimal.valueOf(100)))
+                            .sentiment("NEUTRAL")
+                            .processingMs(processingMs)
+                            .build();
+                    aiAnalysisLogRepository.save(logEntity);
+                } catch (Exception ex) {
+                    log.warn("Khong the luu AiAnalysisLog: {}", ex.getMessage());
+                }
+
             } catch (Exception e) {
-                log.warn("Không tìm thấy khoa với mã: {}", deptCode);
+                log.warn("Khong tim thay khoa phu hop cho ma: {}", deptCode);
             }
         }
 
@@ -144,15 +178,15 @@ public class ChatService {
     private List<Map<String, String>> getHistory(UUID sessionId) {
         return getMessages(sessionId).stream()
                 .map(msg -> Map.of(
-                        "role", msg.getSenderRole() == ChatMessage.SenderRole.USER ? "user" : "bot",
+                        "role", msg.getSenderRole() == ChatMessage.SenderRole.USER ? "user" : "assistant",
                         "content", msg.getContent()
                 ))
                 .toList();
     }
 
     /**
-     * Bệnh nhân xác nhận đăng ký sau khi AI đề xuất phân luồng.
-     * Tạo Ticket chính thức và gắn vào session.
+     * Benh nhan xac nhan dang ky sau khi AI de xuat phan luong.
+     * Tao Ticket chinh thuc va gan vao session.
      */
     @Transactional
     public Ticket confirmRegistration(UUID sessionId, UUID departmentId,
@@ -160,15 +194,15 @@ public class ChatService {
         ChatSession session = findSessionById(sessionId);
         User patient = session.getUser();
 
-        // Phát phiếu khám
+        // Phat phieu kham
         Ticket ticket = ticketService.issueTicket(patient, departmentId, priority, aiSummary, confidence);
 
-        // Gắn ticket vào session
+        // Gan ticket vao session
         session.setTicket(ticket);
         session.setEndedAt(LocalDateTime.now());
         chatSessionRepository.save(session);
 
-        // Lưu tin SYSTEM thông báo hoàn tất
+        // Luu tin SYSTEM thong bao hoan tat
         ChatMessage sysMsg = ChatMessage.builder()
                 .session(session)
                 .senderRole(ChatMessage.SenderRole.SYSTEM)
@@ -179,41 +213,204 @@ public class ChatService {
         return ticket;
     }
 
-    // ── Gọi FastAPI AI ──────────────────────────────────────────────────────────
+    // ======================== Goi Local AI (Ollama) ========================
+
+    private static final String SYSTEM_PROMPT = """
+            Bạn là Trợ lý Y tế AI tiếp đón của Bệnh viện MedAssist.
+            Nhiệm vụ: Lắng nghe bệnh nhân mô tả triệu chứng, trả lời ân cần, giải thích và phân luồng vào đúng chuyên khoa của bệnh viện.
+
+            DANH SÁCH MÃ CHUYÊN KHOA BẮT BUỘC CHỌN:
+            1. KTIEUHOA: Đau dạ dày, đau bụng, buồn nôn, tiêu chảy, ợ chua, trào ngược, ngộ độc thức ăn, táo bón.
+            2. KHOHAP: Ho có đờm, ho khan, viêm phế quản, viêm phổi, khó thở, sốt kèm ho.
+            3. KTMH: Đau rát họng, ngứa họng, viêm xoang, nghẹt mũi, viêm amidan, ù tai, chảy mủ tai.
+            4. KXUONGKHOP: Đau nhức xương, đau khớp gối, thoái hóa khớp, đau lưng, thoát vị đĩa đệm, mỏi vai gáy.
+            5. KDALIEU: Ngứa da, dị ứng da, nổi mề đay, mẩn đỏ, vảy nến, chàm, mụn nhọt ngoài da.
+            6. KMAT: Đau mắt, đỏ mắt, mờ mắt, cộm ngứa mắt, viêm giác mạc, đo khúc xạ.
+            7. KTIM: Đau tức ngực, hồi hộp, đánh trống ngực, tim đập nhanh, tăng huyết áp, suy tim.
+            8. KTHANKINH: Đau đầu dữ dội, đau nửa đầu, chóng mặt mất thăng bằng, mất ngủ kinh niên, tê bì tay chân.
+            9. KCAPCUU: Bất tỉnh, ngất xỉu, co giật, khó thở dữ dội tím tái, đau ngực dữ dội vã mồ hôi, tai nạn thương tích nặng.
+            10. KNHI: Tất cả bệnh nhân là trẻ em dưới 16 tuổi.
+            11. KSAN: Khám thai, phụ khoa, rối loạn kinh nguyệt.
+
+            MỨC ĐỘ ƯU TIÊN (priority):
+            - M1: Cấp cứu ngay (đe dọa tính mạng)
+            - M2: Khẩn cấp (triệu chứng nặng, sốt cao > 39 độ, đau dữ dội)
+            - M3: Ưu tiên (triệu chứng rõ ràng cần khám trong ngày)
+            - M4: Thông thường (triệu chứng nhẹ, ổn định)
+            - M5: Không khẩn (khám sức khỏe định kỳ)
+
+            QUY TẮC PHẢN HỒI:
+            - Nếu chỉ chào hỏi hoặc chưa có triệu chứng bệnh: has_triage_result = false, triage = null, reply ân cần hỏi thêm triệu chứng.
+            - Nếu có triệu chứng bệnh: has_triage_result = true, triage bắt buộc chứa:
+              + department_code: một trong các mã chính xác ở trên (KTIEUHOA, KHOHAP, KTMH, KXUONGKHOP, KDALIEU, KMAT, KTIM, KTHANKINH, KCAPCUU, KNHI, KSAN)
+              + priority: M1/M2/M3/M4/M5
+              + confidence: số nguyên 75 - 98
+              + summary: tóm tắt triệu chứng ngắn gọn
+              + advice: lời khuyên chăm sóc ban đầu
+
+            BẮT BUỘC TRẢ VỀ DUY NHẤT 1 ĐỐI TƯỢNG JSON:
+            {
+              "reply": "câu trả lời ân cần cho bệnh nhân",
+              "has_triage_result": true/false,
+              "triage": {
+                "department_code": "MÃ_KHOA",
+                "priority": "M1|M2|M3|M4|M5",
+                "confidence": 85,
+                "summary": "tóm tắt",
+                "advice": "lời khuyên"
+              }
+            }
+            """;
 
     private AiResponse callAiService(String userText, String sessionId, List<Map<String, String>> history) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
+            // Xay dung danh sach message cho Ollama chat API
+            List<Map<String, String>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT));
+
+            // Lay toi da 6 tin nhan gan nhat de giu ngu canh
+            int startIdx = Math.max(0, history.size() - 6);
+            for (int i = startIdx; i < history.size(); i++) {
+                messages.add(history.get(i));
+            }
+            messages.add(Map.of("role", "user", "content", userText));
+
             Map<String, Object> body = new HashMap<>();
-            body.put("message", userText);
-            body.put("session_id", sessionId);
-            body.put("history", history);
+            body.put("model", aiModelName);
+            body.put("messages", messages);
+            body.put("format", "json");
+            body.put("stream", false);
+            body.put("options", Map.of("temperature", 0.1));
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    aiServiceUrl + "/chat", request, Map.class);
+            String url = aiServiceUrl.replaceAll("/+$", "") + "/api/chat";
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> data = (Map<String, Object>) response.getBody();
-                String reply       = String.valueOf(data.getOrDefault("reply", "Xin lỗi, tôi chưa hiểu. Bạn có thể mô tả lại triệu chứng không?"));
-                boolean hasTriage  = Boolean.TRUE.equals(data.get("has_triage_result"));
-                
-                @SuppressWarnings("unchecked")
-                Map<String, Object> triageRaw = (Map<String, Object>) data.get("triage");
 
-                return new AiResponse(reply, hasTriage, triageRaw);
+                // Ollama tra ve: { "message": { "role": "assistant", "content": "{...}" } }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> msg = (Map<String, Object>) data.get("message");
+                if (msg != null && msg.containsKey("content")) {
+                    String contentStr = String.valueOf(msg.get("content")).trim();
+
+                    // Parse JSON ben trong content cua LLM
+                    Map<String, Object> parsed = objectMapper.readValue(
+                            contentStr, new TypeReference<Map<String, Object>>() {});
+
+                    String reply = String.valueOf(parsed.getOrDefault(
+                            "reply", "Tôi đã ghi nhận triệu chứng của bạn và đề xuất phân luồng khám bệnh."));
+                    boolean hasTriage = Boolean.TRUE.equals(parsed.get("has_triage_result"));
+
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> triageRaw = (Map<String, Object>) parsed.get("triage");
+
+                    return new AiResponse(reply, hasTriage, triageRaw);
+                }
             }
         } catch (Exception e) {
-            log.error("Lỗi kết nối AI service: {}", e.getMessage());
+            log.error("Lỗi khi kết nối Local AI Ollama ({}) tại {}: {}", aiModelName, aiServiceUrl, e.getMessage());
         }
-        // Fallback khi AI service offline
-        return new AiResponse("Xin chào! Bạn đang gặp triệu chứng gì? Hãy mô tả để tôi hỗ trợ phân luồng khám bệnh nhé.", false, null);
+
+        // Fallback khi Ollama offline hoac chua khoi dong
+        return fallbackResponse(userText);
     }
 
-    // ── DTO nội bộ ──────────────────────────────────────────────────────────────
+    private AiResponse fallbackResponse(String userText) {
+        String lower = userText.toLowerCase();
+        boolean hasSymptom = lower.contains("đau") || lower.contains("sốt") || lower.contains("ho")
+                || lower.contains("mệt") || lower.contains("khó thở") || lower.contains("ngứa")
+                || lower.contains("bệnh") || lower.contains("khám");
+
+        if (!hasSymptom) {
+            return new AiResponse("Xin chào! Tôi là Trợ lý Y tế AI của bệnh viện. Bạn đang gặp triệu chứng khó chịu gì? Hãy mô tả để tôi hỗ trợ phân luồng khám bệnh nhé.", false, null);
+        }
+
+        // Heuristic fallback don gian dua tren tu khoa
+        String dept = "KHOA_NOI";
+        if (lower.contains("bụng") || lower.contains("dạ dày") || lower.contains("nôn") || lower.contains("tiêu chảy")) {
+            dept = "KTIEUHOA";
+        } else if (lower.contains("ho") || lower.contains("phổi") || lower.contains("đờm") || lower.contains("thở")) {
+            dept = "KHOHAP";
+        } else if (lower.contains("họng") || lower.contains("xoang") || lower.contains("tai") || lower.contains("mũi")) {
+            dept = "KTMH";
+        } else if (lower.contains("xương") || lower.contains("khớp") || lower.contains("lưng") || lower.contains("gối")) {
+            dept = "KXUONGKHOP";
+        } else if (lower.contains("da") || lower.contains("ngứa") || lower.contains("mẩn") || lower.contains("dị ứng")) {
+            dept = "KDALIEU";
+        } else if (lower.contains("mắt") || lower.contains("nhìn")) {
+            dept = "KMAT";
+        } else if (lower.contains("ngực") || lower.contains("tim") || lower.contains("huyết áp")) {
+            dept = "KTIM";
+        } else if (lower.contains("đầu") || lower.contains("chóng mặt") || lower.contains("ngủ")) {
+            dept = "KTHANKINH";
+        }
+
+        Map<String, Object> triage = new HashMap<>();
+        triage.put("department_code", dept);
+        triage.put("priority", "M3");
+        triage.put("confidence", 80);
+        triage.put("summary", "Đăng ký khám theo triệu chứng: " + userText);
+        triage.put("advice", "Vui lòng giữ gìn sức khỏe và đến phòng khám theo chỉ dẫn.");
+
+        return new AiResponse("Dựa trên mô tả triệu chứng của bạn, tôi đề xuất bạn đăng ký khám tại chuyên khoa phù hợp dưới đây.", true, triage);
+    }
+
+    /**
+     * Chuan hoa va sua loi ma khoa (neu LLM sinh ra ma alias nhu KHOA_HOHAP, HOHAP...)
+     */
+    private String normalizeDeptCode(String code, String userText) {
+        if (code == null) return "KHOHAP";
+        String c = code.trim().toUpperCase().replace("KHOA_", "").replace("KHOA", "");
+
+        // Kiem tra tu khoa de phong ngua LLM nham lan
+        String lowerText = userText.toLowerCase();
+        if ((lowerText.contains("bụng") || lowerText.contains("dạ dày") || lowerText.contains("tiêu chảy"))
+                && !c.contains("TIEUHOA")) {
+            return "KTIEUHOA";
+        }
+
+        return switch (c) {
+            case "CAPCUU", "KCAPCUU" -> "KCAPCUU";
+            case "SAN", "KSAN" -> "KSAN";
+            case "TIM", "KTIM", "TIMMACH" -> "KTIM";
+            case "TMH", "KTMH", "TAIMUIHONG" -> "KTMH";
+            case "NHI", "KNHI" -> "KNHI";
+            case "THANKINH", "KTHANKINH" -> "KTHANKINH";
+            case "MAT", "KMAT" -> "KMAT";
+            case "HOHAP", "KHOHAP" -> "KHOHAP";
+            case "TIEUHOA", "KTIEUHOA" -> "KTIEUHOA";
+            case "DALIEU", "KDALIEU" -> "KDALIEU";
+            case "XUONGKHOP", "KXUONGKHOP" -> "KXUONGKHOP";
+            default -> code.trim().toUpperCase();
+        };
+    }
+
+    private Department resolveDepartment(String deptCode) {
+        try {
+            return departmentService.findByCode(deptCode);
+        } catch (Exception e) {
+            // Neu ma khoa chua co tien to K
+            try {
+                return departmentService.findByCode("K" + deptCode);
+            } catch (Exception e2) {
+                // Lay khoa hoat dong dau tien lam fallback
+                List<Department> active = departmentService.findActive();
+                if (!active.isEmpty()) {
+                    return active.get(0);
+                }
+                throw e;
+            }
+        }
+    }
+
+    // ======================== DTO noi bo ========================
 
     record AiResponse(String reply, boolean hasTriageResult, Map<String, Object> triageRaw) {}
 
