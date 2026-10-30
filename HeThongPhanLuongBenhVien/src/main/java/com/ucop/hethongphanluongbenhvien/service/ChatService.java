@@ -436,7 +436,7 @@ public class ChatService {
 
     private String normalizeDeptCode(String code, String userText) {
         if (code == null) return "KHOHAP";
-        String c = code.trim().toUpperCase().replace("KHOA_", "").replace("KHOA", "");
+        String c = code.trim().toUpperCase().replace("KHOA_", "").replace("KHOA", "").replace("_", "");
 
         String lowerText = userText.toLowerCase();
         if ((lowerText.contains("bụng") || lowerText.contains("dạ dày") || lowerText.contains("tiêu chảy") || lowerText.contains("ợ chua") || lowerText.contains("trào ngược"))
@@ -448,6 +448,7 @@ public class ChatService {
             case "CAPCUU", "KCAPCUU" -> "KCAPCUU";
             case "SAN", "KSAN" -> "KSAN";
             case "TIM", "KTIM", "TIMMACH" -> "KTIM";
+            case "COXUONGKHOP" -> "KXUONGKHOP";
             case "TMH", "KTMH", "TAIMUIHONG" -> "KTMH";
             case "NHI", "KNHI" -> "KNHI";
             case "THANKINH", "KTHANKINH" -> "KTHANKINH";
