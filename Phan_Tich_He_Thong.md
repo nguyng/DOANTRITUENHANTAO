@@ -35,8 +35,8 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 │                      AI SERVICE LAYER (Python)                        │
 │  ┌──────────────────────────┐   ┌───────────────────────────────┐    │
 │  │   NLP Service (FastAPI)  │   │  CV Service (FastAPI)         │    │
-│  │  • PhoBERT (Phân luồng) │   │  • YOLOv8 (Detect BHYT)      │    │
-│  │  • PhoBERT (FAQ)         │   │  • Tesseract/VietOCR (OCR)   │    │
+│  │  • Ollama qwen2.5-coder:3b (Phân luồng 2 giai đoạn) │   │  • BHYT Verification Engine      │    │
+│  │  • Trợ lý tiếp đón & FAQ         │   │  • Đối soát BHYT chính chủ khớp CCCD   │    │
 │  │  • Sentiment Analysis    │   │  • Image Moderation           │    │
 │  └──────────────────────────┘   └───────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────────┘
@@ -55,15 +55,12 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 
 | Tầng | Công nghệ | Lý do lựa chọn |
 |------|-----------|----------------|
-| **Frontend** | Thymeleaf + HTML/CSS/JS + Tailwind | Render trực tiếp từ Spring Boot, dễ tích hợp, phù hợp 2 người |
-| **Backend** | Spring Boot **4.1.1** (Java **21**) | Robust, hỗ trợ WebSocket tốt, phân quyền dễ |
-| **AI Service** | FastAPI (Python 3.10+) | Native với thư viện ML (PyTorch, HuggingFace) |
-| **Database** | PostgreSQL 15 | ACID, JSON support, tốt cho dữ liệu quan hệ |
-| **Cache & Queue** | Redis 7 | Lưu session, quản lý hàng đợi STT |
-| **File Storage** | MinIO (self-hosted S3) | Lưu ảnh thẻ BHYT, OCR output |
-| **Real-time** | WebSocket (STOMP/SockJS) | Thông báo đẩy, cập nhật hàng đợi |
-| **Auth** | JWT + Spring Security | Phân quyền đa cấp, stateless |
-| **Containerize** | Docker + Docker Compose | Dễ deploy, isolate các service |
+| **Frontend** | Thymeleaf + HTML5/CSS3 + Tailwind CSS | Giao diện tối ưu Mobile & Desktop, render trực tiếp từ Spring Boot |
+| **Core Backend** | Spring Boot **4.1.1** (Java **21 LTS**) | Nền tảng Spring hiện đại, bảo mật cao, kiến trúc dịch vụ tinh gọn |
+| **AI Engine** | Local LLM via Ollama (`qwen2.5-coder:3b`) | Xử lý suy luận cục bộ (:11434), bảo mật dữ liệu y tế, phân luồng 2 giai đoạn |
+| **Database** | PostgreSQL **18** | Lưu trữ quan hệ ACID, hỗ trợ JSONB cho nhật ký AI và đối soát CCCD-BHYT |
+| **Security & Auth** | Spring Security 6 (Session-based) | Định danh bệnh nhân bằng CCCD 12 số, phân quyền chặt chẽ PATIENT/NURSE/ADMIN |
+| **BHYT Engine** | 3-Layer Verification Service | Chuẩn hóa thẻ BHYT 15 ký tự và đối soát chính chủ với CCCD |
 
 ---
 
@@ -376,7 +373,7 @@ Bệnh nhân gửi ảnh thẻ BHYT
 
 ```
 PUBLIC (Chưa đăng nhập)
-├── /login                ← Đăng nhập bằng Mã BHYT + mật khẩu
+├── /login                ← Đăng nhập bằng CCCD 12 số (hoặc BHYT) + mật khẩu
 └── /display/:deptId      ← Màn hình hành lang (Public)
 
 BỆNH NHÂN (PATIENT role) — Sau khi đăng nhập
@@ -465,7 +462,7 @@ QUẢN TRỊ VIÊN (ADMIN role)
                          │              HỆ THỐNG MedAssist                   │
                          │                                                  │
   ┌─────────────┐        │  ┌────────────────────────────────────────────┐  │
-  │             │        │  │  UC-01: Đăng nhập bằng Mã BHYT + mật khẩu │  │
+  │             │        │  │  UC-01: Đăng nhập bằng CCCD 12 số (hoặc BHYT) + mật khẩu │  │
   │  BỆNH NHÂN  │───────►│  │  UC-02: Đổi mật khẩu lần đầu đăng nhập    │  │
   │             │        │  │  UC-03: Xem thông tin cá nhân & BH         │  │
   │             │───────►│  │  UC-04: Xem lịch sử khám bệnh (danh sách)  │  │

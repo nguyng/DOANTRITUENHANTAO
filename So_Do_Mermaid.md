@@ -14,15 +14,15 @@ graph TD
     ROOT --> D["4. Lịch sử Khám bệnh"]
     ROOT --> E["5. Quản trị hệ thống"]
 
-    A --> A1["1.1 Đăng nhập bằng Mã BHYT"]
+    A --> A1["1.1 Đăng nhập bằng CCCD (hỗ trợ BHYT)"]
     A --> A2["1.2 Đổi mật khẩu"]
     A --> A3["1.3 Xem thông tin cá nhân & BHYT"]
     A --> A4["1.4 Tra cứu chỉ dẫn đường đi"]
 
-    B --> B1["2.1 Phân tích triệu chứng (PhoBERT)"]
+    B --> B1["2.1 Phân luồng 2 giai đoạn (Local AI Ollama)"]
     B --> B2["2.2 Trả lời câu hỏi FAQ"]
-    B --> B3["2.3 OCR nhận diện thẻ BHYT (YOLOv8)"]
-    B --> B4["2.4 Phát hiện mức độ khẩn cấp"]
+    B --> B3["2.3 Xác thực BHYT chính chủ khớp CCCD"]
+    B --> B4["2.4 Bẫy cấp cứu Red Flag Bypass (M1)"]
 
     C --> C1["3.1 Bốc số thứ tự khám"]
     C --> C2["3.2 Y tá gọi số tiếp theo"]
@@ -356,7 +356,7 @@ flowchart TD
     A["Bệnh nhân nhập mô tả triệu chứng"]
     B["WebSocket gửi tin nhắn đến Spring Boot"]
     C["Spring Boot lưu CHAT_MESSAGE vào DB"]
-    D["Gọi FastAPI NLP: POST /analyze-symptom"]
+    D["Gọi Local Ollama AI: POST /analyze-symptom"]
     E{"Phân loại Intent"}
     F["Gọi PhoBERT Triage Model"]
     G["Trả lời FAQ từ database"]
@@ -411,7 +411,7 @@ sequenceDiagram
     actor BN as 👤 Bệnh nhân
     participant WS as WebSocket Handler
     participant SB as Spring Boot
-    participant AI as FastAPI NLP
+    participant AI as Local Ollama AI
     participant DB as PostgreSQL
     participant RD as Redis Queue
 
@@ -422,7 +422,7 @@ sequenceDiagram
 
     AI->>AI: Tiền xử lý văn bản
     AI->>AI: Phân loại Intent (SYMPTOM)
-    AI->>AI: PhoBERT dự đoán Khoa
+    AI->>AI: Local AI Ollama chốt Khoa (Giai đoạn 2)
     AI-->>SB: {dept_id, confidence: 0.89, severity: MEDIUM}
 
     SB->>DB: Lưu AI_ANALYSIS_LOG
@@ -546,7 +546,7 @@ graph TB
         DIS["Public Display\nMàn hình Hành lang"]
     end
 
-    subgraph APP["⚙️ APPLICATION LAYER (Tier 2) — Spring Boot Java 17"]
+    subgraph APP["⚙️ APPLICATION LAYER (Tier 2) — Spring Boot 4.1.1 (Java 21)"]
         AUTH["Auth Module\n(JWT/Spring Security)"]
         CHAT["Chat Module\n(WebSocket/STOMP)"]
         QUEUE["Queue Module\n(Redis)"]
@@ -560,7 +560,7 @@ graph TB
     end
 
     subgraph DATA["🗄️ DATA LAYER (Tier 3)"]
-        PG[("PostgreSQL 15\nMain Database")]
+        PG[("PostgreSQL 18\nMain Database")]
         RD[("Redis 7\nCache & Queue")]
         MN[("MinIO\nFile Storage")]
         RMQ[("RabbitMQ\nMessage Broker")]
@@ -598,11 +598,11 @@ graph LR
     end
 
     subgraph BE["Backend"]
-        SB["Spring Boot\n:8080"]
+        SB["Spring Boot\n:8081"]
     end
 
     subgraph AISVR["AI Services"]
-        NLP["FastAPI NLP\n:8001"]
+        NLP["Local Ollama AI\n:8001"]
         CV["FastAPI CV\n:8002"]
     end
 
@@ -644,7 +644,7 @@ graph TB
     end
 
     USER["👤 Người dùng\n(Browser)"] -->|"HTTPS :443"| NGINX
-    NGINX -->|"proxy_pass :8080"| SB
+    NGINX -->|"proxy_pass :8081"| SB
     SB -->|":8001"| NLP
     SB -->|":8002"| CV
     SB -->|":5432"| PG
@@ -762,14 +762,14 @@ graph TD
     ROOT --> D["4. Lịch sử Khám bệnh"]
     ROOT --> E["5. Quản trị hệ thống"]
 
-    A --> A1["1.1 Đăng nhập bằng Mã BHYT"]
+    A --> A1["1.1 Đăng nhập bằng CCCD (hỗ trợ BHYT)"]
     A --> A2["1.2 Đổi mật khẩu"]
     A --> A3["1.3 Xem thông tin cá nhân & BHYT"]
 
-    B --> B1["2.1 Phân tích triệu chứng (PhoBERT)"]
+    B --> B1["2.1 Phân luồng 2 giai đoạn (Local AI Ollama)"]
     B --> B2["2.2 Trả lời câu hỏi FAQ"]
-    B --> B3["2.3 OCR nhận diện thẻ BHYT (YOLOv8)"]
-    B --> B4["2.4 Phát hiện mức độ khẩn cấp"]
+    B --> B3["2.3 Xác thực BHYT chính chủ khớp CCCD"]
+    B --> B4["2.4 Bẫy cấp cứu Red Flag Bypass (M1)"]
 
     C --> C1["3.1 Bốc số thứ tự khám"]
     C --> C2["3.2 Y tá gọi số tiếp theo"]

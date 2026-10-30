@@ -1,199 +1,188 @@
-# 🔌 HƯỚNG DẪN KẾT NỐI MODEL AI VÀO WEB
+# 🔌 HƯỚNG DẪN KẾT NỐI LOCAL AI (OLLAMA) VÀO HỆ THỐNG MEDASSIST
 
-## 1. Kiến trúc kết nối
-
-```
-Trình duyệt ──(AJAX /chat/send)──► Spring Boot :8081 ──(HTTP POST /chat)──► FastAPI AI :8000
-                                        │                                      │
-                                        │◄──────── JSON kết quả phân loại ──────┘
-                                        ▼
-                                   PostgreSQL (lưu tin nhắn, phát phiếu)
-```
-
-- Trình duyệt **không** gọi AI trực tiếp, mà đi qua Spring Boot (không cần cấu hình CORS).
-- Spring Boot đọc địa chỉ AI từ `application.properties`:
-  ```properties
-  ai.service.url=http://localhost:8000
-  ```
+> **Phiên bản kiến trúc mới (Tháng 10/2026):**  
+> Hệ thống đã chuyển đổi toàn diện từ mô hình huấn luyện FastAPI/PhoBERT cũ sang **Mô hình Trí tuệ Nhân tạo Cục bộ (Local LLM via Ollama `qwen2.5-coder:3b`)**. Backend Spring Boot kết nối trực tiếp với Ollama API thông qua cơ chế hội thoại 2 giai đoạn (Two-Phase Differential Inquiry) và bẫy cấp cứu (Red Flag Bypass), không phụ thuộc vào service Python trung gian.
 
 ---
 
-## 2. Hợp đồng API — hội thoại nhiều lượt (theo thiết kế của nhóm)
-
-AI **hỏi thêm** (thời điểm khởi phát, mức khó chịu 1–10, tuổi, dấu hiệu cảnh báo) trước khi kết luận.
-Vì vậy mỗi lượt chat có 2 trạng thái:
+## 1. Kiến trúc kết nối trực tiếp
 
 ```
-Lượt 1..n-1 : AI đang hỏi thêm      → has_triage_result = false  → web chỉ hiện bong bóng chat
-Lượt n      : AI đủ thông tin       → has_triage_result = true   → web hiện thẻ KẾT QUẢ + nút Nhận phiếu
+Trình duyệt Web ──(AJAX /chat/send)──► Spring Boot 4.1.1 (:8081) ──(HTTP POST /api/chat)──► Local Ollama (:11434)
+                                             │                                                      │
+                                             │                                       Model: qwen2.5-coder:3b
+                                             ▼                                                      ▼
+                                       PostgreSQL 18                                         JSON Response
+                                 (Lưu ChatMessage, Ticket)                             (Phân tích & Phân luồng)
 ```
 
-**Request** — Spring Boot gửi **kèm lịch sử hội thoại** (AI không cần tự lưu trạng thái,
-khởi động lại service AI không mất phiên):
-```http
-POST http://localhost:8000/chat
-Content-Type: application/json
+- **Spring Boot backend** đọc cấu hình AI từ `application.properties`:
+  ```properties
+  ai.service.url=http://localhost:11434
+  ai.model.name=qwen2.5-coder:3b
+  ```
+- Backend chịu trách nhiệm quản lý phiên chat (`ChatSession`), lịch sử hội thoại (`ChatMessage`), và chuyển tiếp trực tiếp payload sang Ollama endpoint `/api/chat`.
+- **Cơ chế chịu lỗi (Fail-safe Fallback):** Nếu Ollama phản hồi chậm hoặc ngoại tuyến, module phân luồng quy tắc Java tích hợp sẵn sẽ tự động kích hoạt để người bệnh luôn nhận được tư vấn mà không bị gián đoạn.
 
+---
+
+## 2. Quy trình Phân luồng Lâm sàng 2 Giai đoạn (Two-Phase Clinical Triage)
+
+Nhằm khắc phục tình trạng phán đoán vội vàng khi các bệnh lý có triệu chứng ban đầu tương đồng (ví dụ: đau ngực do Tim mạch vs Viêm phổi màng phổi), hệ thống triển khai quy trình 2 giai đoạn:
+
+```
+[Bệnh nhân nhập triệu chứng ban đầu]
+              │
+              ▼
+   Kiểm tra Red Flag Cấp cứu?
+     ├── CÓ ──► BYPASS TOÀN BỘ AI ──► Định tuyến ngay vào KHOA CẤP CỨU (Mức M1)
+     └── KHÔNG
+           │
+           ▼
+   Xác định Giai đoạn Hội thoại
+     ├── Lượt 1 (Mô tả ngắn, chưa đủ dữ kiện)
+     │     └──► GIAI ĐOẠN 1: Khai thác Triệu chứng Mấu chốt (Probe Prompt)
+     │           └── AI đặt câu hỏi làm rõ tính chất, thời gian, triệu chứng đi kèm
+     │
+     └── Lượt 2 trở đi (Đã có thông tin mấu chốt / Mô tả chi tiết > 120 ký tự)
+           └──► GIAI ĐOẠN 2: Chẩn đoán Phân biệt & Chốt Khoa (Decision Prompt)
+                 └── AI trả về JSON kết quả phân luồng và kích hoạt Thẻ tiếp đón
+```
+
+---
+
+## 3. Hợp đồng Payload gửi tới Ollama (`/api/chat`)
+
+### 3.1. Cấu trúc Request
+
+Spring Boot gửi HTTP POST tới `http://localhost:11434/api/chat` với định dạng JSON:
+
+```json
 {
-  "session_id": "uuid-phien-chat",
-  "patient": { "name": "Nguyen Nguyen", "age": 20, "gender": "MALE" },
-  "history": [
-    { "role": "bot",  "content": "Bạn đang gặp vấn đề sức khỏe gì hôm nay?" },
-    { "role": "user", "content": "Sốt cao 39 độ" },
-    { "role": "bot",  "content": "Sốt xuất hiện từ khi nào, mức khó chịu 1–10? Bạn bao nhiêu tuổi?" },
-    { "role": "user", "content": "6 và 20 tuổi" }
-  ],
-  "message": "có"
+  "model": "qwen2.5-coder:3b",
+  "format": "json",
+  "stream": false,
+  "options": {
+    "temperature": 0.1,
+    "num_predict": 350
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "... SYSTEM PROMPT (Probe hoặc Decision tùy giai đoạn) ..."
+    },
+    { "role": "user", "content": "Tôi bị đau ngực" },
+    { "role": "assistant", "content": "Cơn đau ngực của bạn có cảm giác như thế nào?..." },
+    { "role": "user", "content": "Đau nhói tăng khi hít sâu, ho có đờm và sốt" }
+  ]
 }
 ```
 
-**Response A — đang hỏi thêm:**
+> [!IMPORTANT]
+> - **Vai trò của Prompt:** Mô hình được cấu hình trong vai trò *"Trợ Lý Tiếp Đón & Phân Luồng Phòng Khám"* (nhân viên hành chính điều hướng), **KHÔNG** xưng là "Bác sĩ chẩn đoán bệnh" nhằm tránh cơ chế từ chối an toàn y tế (Safety Refusal) của mô hình mã nguồn mở.
+> - **Kiểm soát sinh từ (`num_predict: 350`):** Giới hạn độ dài output để phản hồi nhanh (< 1-2 giây) và tránh lặp từ vô tận.
+
+### 3.2. Cấu trúc Response Giai đoạn 1 (Khai thác triệu chứng - Chưa chốt khoa)
+
+Khi người bệnh mô tả ngắn gọn ở lượt đầu tiên:
 ```json
 {
-  "reply": "Cảm ơn bạn... Bạn có kèm khó thở, đau ngực, lơ mơ, co giật hay phát ban không?",
-  "has_triage_result": false,
-  "intent": "SYMPTOM"
+  "reply": "Chào bạn, cơn đau ngực của bạn có cảm giác như thế nào (đau nhói khi hít thở, đè nặng lồng ngực hay nóng rát)? Cơn đau có lan đi đâu và có kèm sốt, ho đờm hay khó thở không?",
+  "has_triage_result": false
 }
 ```
+*Kết quả:* Web chỉ hiển thị tin nhắn bot, chưa hiển thị thẻ chọn khoa tiếp nhận.
 
-**Response B — đã phân loại xong** (tương ứng thẻ kết quả trong ảnh thiết kế):
+### 3.3. Cấu trúc Response Giai đoạn 2 (Đã đủ dữ kiện - Phân luồng)
+
+Khi người bệnh đã trả lời câu hỏi làm rõ:
 ```json
 {
-  "reply": "Bạn đang có **dấu hiệu cảnh báo kèm sốt cao**, nên tôi phân loại **khẩn cấp**...",
+  "reply": "Dựa trên triệu chứng đau ngực nhói tăng khi hít sâu kèm sốt và ho đờm, tình trạng của bạn hướng nhiều đến bệnh lý đường hô hấp (viêm phế quản/màng phổi). Tôi phân luồng bạn sang Khoa Hô Hấp.",
   "has_triage_result": true,
-  "intent": "SYMPTOM",
   "triage": {
-    "department_code": "KCAPCUU",
-    "department_name": "Cấp cứu",
+    "department_code": "KHOHAP",
     "priority": "M2",
-    "confidence": 88,
-    "summary": "20 tuổi, sốt cao 39°C, khó chịu 6/10 và có kèm ít nhất một dấu hiệu cảnh báo...",
-    "red_flags": ["Khó thở", "Đau ngực", "Lơ mơ", "Co giật", "Phát ban"],
-    "advice": "Đến khoa Cấp cứu ngay để được đánh giá sớm; không tự trì hoãn theo dõi tại nhà."
+    "confidence": 92,
+    "summary": "Đau ngực kiểu màng phổi tăng khi hít thở, ho đờm, sốt nhẹ",
+    "advice": "Đến Khoa Hô Hấp để được nghe phổi và chụp X-quang lồng ngực kiểm tra."
   }
 }
 ```
 
-| Trường | Bắt buộc | Ý nghĩa / dùng ở đâu trên web |
-|---|---|---|
-| `reply` | ✅ | Bong bóng chat. Được dùng `**đậm**` (web sẽ render markdown) |
-| `has_triage_result` | ✅ | `true` → hiện thẻ kết quả |
-| `intent` | ✅ | `SYMPTOM` / `FAQ` |
-| `triage.department_code` | ✅ khi có kết quả | **Mã khoa** trong bảng `DEPARTMENTS.code` → Spring tra ra UUID |
-| `triage.department_name` | | Tên hiển thị "Khoa để xuất" (chỉ để hiển thị) |
-| `triage.priority` | ✅ | `M1`…`M5` → badge "M2 · Khẩn cấp", ưu tiên của phiếu |
-| `triage.confidence` | | 0–100, lưu vào phiếu |
-| `triage.summary` | | Dòng tóm tắt trong thẻ, lưu vào `ai_summary` của phiếu (y tá xem) |
-| `triage.red_flags` | | Các chip đỏ cảnh báo |
-| `triage.advice` | | Khung lời khuyên màu xanh |
+---
 
-> [!IMPORTANT]
-> **Dùng `department_code` để khớp khoa, không dùng tên.** Ảnh thiết kế ghi "Cấp cứu", còn DB lưu "Khoa Cấp Cứu", so theo tên sẽ không khớp.
-> Danh sách mã hợp lệ (từ `database.sql`):
-> `KCAPCUU` · `KSAN` · `KTIM` · `KTMH` · `KNHI` · `KTHANKINH` · `KMAT` · `KHOHAP` · `KTIEUHOA` · `KDALIEU` · `KXUONGKHOP`
+## 4. Danh mục 11 Chuyên khoa Hợp Lệ
 
-> [!NOTE]
-> Dataset hiện tại (`text,label,intent,severity`) chỉ có 3 mức `NORMAL/MEDIUM/EMERGENCY`. Nếu model chỉ dự đoán được 3 mức đó thì vẫn trả `priority` theo bảng quy đổi bên dưới. Phần quy đổi nên làm **phía AI**, để web luôn nhận M1–M5.
+Hệ thống quản lý thống nhất 11 chuyên khoa với mã chuẩn (`database.sql`):
 
-### Quy đổi mức độ → thang M1–M5 (nên làm phía AI)
-Dataset chỉ có 3 mức, hệ thống dùng 5 mức:
-
-| `severity` từ AI | Ưu tiên phiếu |
-|---|---|
-| `EMERGENCY` | **M1** nếu confidence ≥ 80, ngược lại **M2** |
-| `MEDIUM` | **M3** |
-| `NORMAL` | **M4** |
-| `intent = FAQ` | Không phát phiếu |
+| STT | Mã Khoa (`department_code`) | Tên Khoa | Ví dụ Triệu chứng Tiêu Biểu |
+|:---:|:---|:---|:---|
+| 1 | `KCAPCUU` | Khoa Cấp Cứu | Hôn mê, bất tỉnh, ngừng thở, nôn ra máu, đa chấn thương |
+| 2 | `KTIM` | Khoa Tim Mạch | Đau thắt ngực đè nặng lan tay trái, vã mồ hôi, hồi hộp trống ngực |
+| 3 | `KHOHAP` | Khoa Hô Hấp | Ho đờm, khó thở, đau nhói ngực khi hít sâu, viêm phổi |
+| 4 | `KTIEUHOA` | Khoa Tiêu Hóa | Đau thượng vị, ợ chua, trào ngược, đau quặn bụng, tiêu chảy |
+| 5 | `KXUONGKHOP` | Khoa Cơ Xương Khớp | Đau khớp gối, sưng khớp, thoái hóa cột sống, cứng khớp |
+| 6 | `KTMH` | Khoa Tai Mũi Họng | Đau rát họng, viêm amidan, ù tai, ngạt mũi, chảy mủ tai |
+| 7 | `KMAT` | Khoa Mắt | Đau mắt đỏ, cộm mắt, nhìn mờ, rách giác mạc, chảy nước mắt |
+| 8 | `KDALIEU` | Khoa Da Liễu | Phát ban, ngứa ngáy, dị ứng da, mề đay, mụn nhọt |
+| 9 | `KTHANKINH` | Khoa Thần Kinh | Đau nửa đầu, chóng mặt quay cuồng, tê bì tay chân, mất ngủ |
+| 10 | `KNHI` | Khoa Nhi | Bệnh nhi dưới 15 tuổi có sốt, ho, phát ban, tiêu chảy |
+| 11 | `KSAN` | Khoa Phụ Sản | Khám thai định kỳ, đau bụng dưới thai kỳ, rối loạn kinh nguyệt |
 
 ---
 
-## 3. Mẫu FastAPI (nhóm AI chỉ cần thay phần load/predict)
+## 5. Thang Mức độ Ưu tiên (M1 – M5)
 
-`ai_service/main.py`:
-```python
-from fastapi import FastAPI
-from pydantic import BaseModel
-import joblib
+Hệ thống áp dụng thang phân loại mức độ khẩn cấp theo tiêu chuẩn bệnh viện:
 
-app = FastAPI()
+| Mức | Tên mức | Thời gian đáp ứng | Xử lý trên hệ thống |
+|:---:|:---|:---:|:---|
+| **M1** | Nguy kịch | Ngay lập tức | Tự động bypass AI, đẩy thẳng lên đầu hàng đợi cấp cứu |
+| **M2** | Khẩn cấp | <= 15 phút | Badge đỏ, ưu tiên gọi trước các ca thông thường |
+| **M3** | Ưu tiên | <= 30 phút | Badge cam, khám trong thời gian tiêu chuẩn |
+| **M4** | Thông thường | <= 60 phút | Badge xanh dương, thứ tự khám tuần tự |
+| **M5** | Không khẩn | Hẹn lịch / Theo dõi | Khám sức khỏe định kỳ, tái khám |
 
-# TODO: thay bằng cách load model của nhóm (joblib / torch / transformers ...)
-dept_model = joblib.load("models/department_model.pkl")
-sev_model  = joblib.load("models/severity_model.pkl")
-intent_model = joblib.load("models/intent_model.pkl")
+---
 
-class ChatRequest(BaseModel):
-    message: str
-    session_id: str | None = None
+## 6. Quy trình Vận hành Demo thực tế
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+Khi trình diễn hoặc kiểm thử toàn bộ hệ thống:
 
-@app.post("/chat")
-def chat(req: ChatRequest):
-    text = req.message.strip()
-    intent = intent_model.predict([text])[0]
-
-    if intent == "FAQ":
-        return {"reply": "Bệnh viện làm việc từ 7h00 đến 17h00 các ngày trong tuần.",
-                "has_triage_result": False, "intent": "FAQ"}
-
-    probs = dept_model.predict_proba([text])[0]
-    idx = probs.argmax()
-    department = dept_model.classes_[idx]
-    confidence = int(round(probs[idx] * 100))
-    severity = sev_model.predict([text])[0]
-
-    return {
-        "reply": f"Bạn nên khám tại {department}. Mức độ: {severity}.",
-        "has_triage_result": True,
-        "intent": "SYMPTOM",
-        "department": department,
-        "severity": severity,
-        "confidence": confidence,
-    }
-```
-
-Chạy:
 ```powershell
-pip install fastapi uvicorn joblib scikit-learn
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
+# Bước 1: Khởi động Cơ sở dữ liệu PostgreSQL (port 5432)
+# Đảm bảo database 'hospital_db' đang chạy (User: postgres / Pass: 29061612)
 
-Kiểm tra nhanh (trước khi bật web):
-```powershell
-curl -X POST http://localhost:8000/chat -H "Content-Type: application/json" -d '{\"message\":\"toi bi dau nguc\",\"session_id\":\"test\"}'
+# Bước 2: Khởi động Ollama Local AI (port 11434)
+ollama run qwen2.5-coder:3b
+
+# Bước 3: Khởi động Backend Spring Boot (port 8081)
+cd d:\DOANTRITUENHANTAO\HeThongPhanLuongBenhVien
+./mvnw spring-boot:run
+
+# Bước 4: Mở trình duyệt và trải nghiệm
+# URL: http://localhost:8081/login
+# Đăng nhập bằng CCCD: 079204000001 (Mật khẩu: 123456)
 ```
 
 ---
 
-## 4. ⚠️ Phần Spring Boot CHƯA sẵn sàng (cần sửa trước khi nối)
+## 7. Bộ Kiểm thử Tự động Hóa (Test Suites)
 
-Kiểm tra code hiện tại cho thấy **dù AI trả đúng kết quả, web vẫn chưa hiện nút nhận phiếu**, vì:
+Toàn bộ logic kết nối AI, phân luồng 2 giai đoạn và xác thực BHYT được tự động hóa qua 2 bộ test:
 
-| # | Vị trí | Vấn đề |
-|---|---|---|
-| 1 | `ChatService.AiResponse` | Chỉ giữ `reply` và `has_triage_result`. **Bỏ mất** khoa, mức độ, độ tin cậy |
-| 2 | `PatientController /chat/send` | Chỉ trả về tin nhắn bot, không kèm kết quả phân loại |
-| 3 | `chat.html` | Thẻ "KẾT QUẢ PHÂN LOẠI AI" chỉ render phía server (`${aiResult}`), nhưng chat gửi bằng AJAX nên thẻ không bao giờ hiện |
-| 4 | Chưa có | Hàm đổi **tên khoa → UUID** và **severity → M1–M5** |
-| 5 | `RestTemplate` | Chưa đặt timeout; model chậm có thể làm treo request |
+1. **Unit Test (Maven Surefire - 15 tests):**
+   ```powershell
+   ./mvnw test
+   ```
+   - `BhytVerificationServiceTest`: 6 tests kiểm tra định dạng và nguồn BHYT
+   - `UserCccdAndBhytMatchingTest`: 3 tests kiểm tra tra cứu CCCD và khớp thẻ chính chủ
+   - `TwoPhaseClinicalTriageTest`: 5 tests kiểm tra Red Flag, Prompt phân luồng và Fallback
+   - `HeThongPhanLuongBenhVienApplicationTests`: 1 test nạp toàn bộ Spring Context
 
-**Việc cần làm phía Spring:**
-1. Mở rộng `AiResponse` thêm `department`, `severity`, `confidence`.
-2. `/chat/send` trả JSON gồm `{ reply, triage: { departmentId, departmentName, priority, confidence, locationGuide } }`.
-3. JS trong `chat.html` hiển thị thẻ kết quả, kèm nút gửi `POST /chat/confirm` (sessionId, departmentId, priority, aiSummary, confidence).
-4. Tra khoa theo tên, quy đổi mức độ theo bảng ở mục 2.
-5. Đặt timeout ~10 giây. AI lỗi thì hiện cho bệnh nhân tự chọn khoa.
-
----
-
-## 5. Quy trình chạy khi demo
-
-```
-1. PostgreSQL  (cổng 5432)        — đã chạy sẵn
-2. FastAPI AI  : uvicorn main:app --port 8000
-3. Spring Boot : .\mvnw.cmd spring-boot:run   (JDK 21, cổng 8081)
-4. Mở http://localhost:8081/login → BHYT HN47900000001 / 123456 → chat
-```
+2. **Integration Test End-to-End (Python):**
+   ```powershell
+   python d:\DOANTRITUENHANTAO\HeThongPhanLuongBenhVien\test_integration.py
+   ```
+   Chạy 9 kịch bản thực tế đối soát từ đăng nhập CCCD, chat 2 giai đoạn, bẫy cấp cứu đến chặn gian lận BHYT (kết quả 9/9 PASS).

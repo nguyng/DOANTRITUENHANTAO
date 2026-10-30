@@ -51,17 +51,17 @@ Mục tiêu 1 – Tự động hóa khâu tiếp đón:
   năng tiếp nhận và tương tác với bệnh nhân qua kênh chat ngay từ bước đầu tiên,
   trước khi bệnh nhân đến trực tiếp tại cơ sở y tế.
 
-Mục tiêu 2 – Phân luồng thông minh theo triệu chứng:
-  Ứng dụng mô hình Xử lý Ngôn ngữ Tự nhiên (PhoBERT) để phân tích và hiểu các
-  đoạn mô tả triệu chứng bằng tiếng Việt của bệnh nhân, từ đó tự động gợi ý và
-  điều hướng bệnh nhân đến đúng Chuyên khoa cần khám.
-  Ví dụ: Bệnh nhân nhập "Tôi bị đau bụng quằn quại và nôn mửa liên tục" →
-  Hệ thống điều hướng đến Khoa Tiêu hóa hoặc Khoa Cấp Cứu (tùy mức độ khẩn cấp).
+Mục tiêu 2 – Phân luồng lâm sàng thông minh 2 giai đoạn:
+  Ứng dụng Mô hình Ngôn ngữ Lớn Cục bộ (Local LLM via Ollama qwen2.5-coder:3b)
+  kết hợp quy trình Phân luồng Lâm sàng 2 Giai đoạn (Two-Phase Differential Inquiry):
+  - Giai đoạn 1: Chủ động hỏi sâu các triệu chứng mấu chốt để phân biệt bệnh lý.
+  - Giai đoạn 2: Chẩn đoán phân biệt và chốt chuyên khoa kèm mức độ ưu tiên (M1-M5).
+  - Tích hợp Bẫy Cấp cứu (Red Flag Bypass) tự động ngắt AI khi có nguy cơ tử vong.
 
-Mục tiêu 3 – Tự động hóa trích xuất thông tin thẻ BHYT:
-  Ứng dụng Thị giác Máy tính (YOLOv8 + OCR) để tự động nhận diện và đọc thông
-  tin từ ảnh chụp thẻ Bảo hiểm Y tế do bệnh nhân gửi vào đoạn chat, thay thế hoàn
-  toàn thao tác nhập liệu thủ công tại quầy tiếp đón.
+Mục tiêu 3 – Tự động hóa xác thực và kiểm soát BHYT chính chủ:
+  Xây dựng module xác thực thẻ BHYT 15 ký tự (chuẩn Quyết định 1666/QĐ-BHXH) qua 3 lớp
+  (Định dạng -> CSDL Nội bộ -> Cổng giả lập BHXH), đồng thời đối soát tính toàn vẹn
+  với CCCD 12 số của tài khoản đang đăng nhập nhằm ngăn chặn triệt để gian lận viện phí.
 
 Mục tiêu 4 – Giải đáp câu hỏi thường gặp (FAQ) tự động:
   Xây dựng bộ phản hồi tự động cho các câu hỏi phổ biến về lịch làm việc, quy trình
@@ -107,18 +107,18 @@ Giới hạn về chức năng:
     quyết định y khoa cuối cùng luôn thuộc về đội ngũ bác sĩ chuyên môn.
 
 Giới hạn về phân luồng chuyên khoa:
-  Hệ thống phân loại và điều hướng bệnh nhân vào 12 nhóm chuyên khoa phổ biến:
-    1. Khoa Cấp Cứu              7. Khoa Thần Kinh
-    2. Khoa Tim Mạch             8. Khoa Tai Mũi Họng
-    3. Khoa Tiêu Hóa             9. Khoa Mắt
-    4. Khoa Xương Khớp          10. Khoa Da Liễu
-    5. Khoa Hô Hấp              11. Khoa Nhi
-    6. Khoa Sản – Phụ Khoa      12. Khoa Nội Tổng Quát (mặc định)
+  Hệ thống phân loại và điều hướng bệnh nhân vào 11 nhóm chuyên khoa chuẩn của bệnh viện:
+    1. Khoa Cấp Cứu (KCAPCUU)       7. Khoa Mắt (KMAT)
+    2. Khoa Tim Mạch (KTIM)         8. Khoa Tai Mũi Họng (KTMH)
+    3. Khoa Hô Hấp (KHOHAP)         9. Khoa Thần Kinh (KTHANKINH)
+    4. Khoa Tiêu Hóa (KTIEUHOA)    10. Khoa Nhi (KNHI)
+    5. Khoa Cơ Xương Khớp (KXUONGKHOP) 11. Khoa Phụ Sản (KSAN)
+    6. Khoa Da Liễu (KDALIEU)
 
-Giới hạn về xử lý hình ảnh:
-  Module nhận dạng và trích xuất thông tin chỉ được tối ưu hóa cho mẫu thẻ Bảo
-  hiểm Y tế (BHYT) theo chuẩn Việt Nam hiện hành. Việc mở rộng sang CCCD hoặc
-  các loại giấy tờ tùy thân khác có thể được cân nhắc trong phiên bản nâng cao sau.
+Giới hạn về phạm vi nghiệp vụ và định danh:
+  - Hệ thống sử dụng số Căn cước công dân (CCCD) 12 số làm mã định danh duy nhất cho
+    bệnh nhân, đồng thời liên kết chặt chẽ với mã thẻ BHYT 15 ký tự để giảm trừ chi phí.
+  - Toàn bộ quá trình suy luận AI diễn ra cục bộ (Local AI), không gửi dữ liệu ra cloud.
 
 Giới hạn về ngôn ngữ:
   Hệ thống được xây dựng và tối ưu hóa hoàn toàn cho tiếng Việt. Không hỗ trợ
@@ -136,59 +136,45 @@ Machine Learning – thông qua việc kết hợp sức mạnh của hai lĩnh 
 ├─────────────────────┬───────────────────────────────────────┤
 │ Lĩnh vực            │ Mô hình / Công nghệ                   │
 ├─────────────────────┼───────────────────────────────────────┤
-│ NLP (Xử lý ngôn     │ PhoBERT (Fine-tuned)                  │
-│ ngữ tự nhiên)       │ – Text Classification                 │
-│                     │ – Intent Recognition                  │
+│ Local LLM Engine    │ Ollama qwen2.5-coder:3b               │
+│ (Trí tuệ nhân tạo)  │ – Phân luồng lâm sàng 2 giai đoạn     │
+│                     │ – Xuất kết quả JSON có cấu trúc       │
 ├─────────────────────┼───────────────────────────────────────┤
-│ Computer Vision     │ YOLOv8 – Object Detection             │
-│ (Thị giác máy tính) │ VietOCR – Optical Character           │
-│                     │ Recognition (OCR)                     │
+│ An toàn & Định tuyến│ Red Flag Emergency Bypass Rule        │
+│ khẩn cấp            │ – Phát hiện từ khóa sinh tồn cực đoan │
+│                     │ – Định tuyến thẳng Cấp Cứu M1        │
+├─────────────────────┼───────────────────────────────────────┤
+│ Khớp định danh      │ 3-Layer BHYT Verification Engine      │
+│ & Chống gian lận    │ – Đối soát BHYT 15 số khớp CCCD 12 số │
 └─────────────────────┴───────────────────────────────────────┘
 
-A. Xử lý Ngôn ngữ Tự nhiên (NLP) – Sử dụng PhoBERT:
+A. Mô hình Ngôn ngữ Lớn Cục bộ (Local LLM) – Sử dụng Ollama qwen2.5-coder:3b:
 
-  PhoBERT là mô hình ngôn ngữ lớn (Large Language Model) được phát triển bởi
-  nhóm nghiên cứu VinAI Research, dựa trên kiến trúc BERT (Bidirectional Encoder
-  Representations from Transformers) của Google và được huấn luyện chuyên biệt
-  trên kho ngữ liệu tiếng Việt khổng lồ (20GB dữ liệu văn bản thuần Việt).
+  Thay vì phụ thuộc vào các API đám mây có nguy cơ lộ lọt dữ liệu y tế của bệnh nhân
+  hoặc các mô hình NLP cũ chỉ phân loại tĩnh 1 lượt, hệ thống ứng dụng mô hình
+  qwen2.5-coder:3b được tối ưu hóa chạy cục bộ trên hạ tầng bệnh viện qua Ollama.
 
-  Nhóm sử dụng kỹ thuật Fine-tuning (tinh chỉnh) PhoBERT trên tập dữ liệu
-  triệu chứng y tế tiếng Việt của nhóm tự xây dựng (~18.000 mẫu) để thực hiện
-  hai nhiệm vụ cốt lõi:
+  Quy trình Phân luồng Lâm sàng 2 Giai đoạn (Two-Phase Differential Inquiry):
+    - Giai đoạn 1 (SYSTEM_PROMPT_PROBE): Khi bệnh nhân mô tả triệu chứng chung chung,
+      mô hình đóng vai trò Trợ lý tiếp đón phòng khám, chủ động đặt câu hỏi thăm dò
+      các triệu chứng mấu chốt (tính chất đau, hướng lan, sốt, thời gian khởi phát).
+    - Giai đoạn 2 (SYSTEM_PROMPT_DECISION): Khi có dữ liệu lâm sàng làm rõ, mô hình
+      thực hiện chẩn đoán phân biệt, xác định chính xác 1 trong 11 Chuyên khoa kèm mức độ
+      ưu tiên M1–M5, độ tin cậy và tóm tắt lời khuyên dưới dạng JSON chuẩn hóa.
 
-  Nhiệm vụ 1 – Phân loại văn bản (Text Classification):
-    Đầu vào: Đoạn tin nhắn mô tả triệu chứng của bệnh nhân (ngôn ngữ tự nhiên).
-    Đầu ra: Nhãn Chuyên khoa tương ứng (VD: "Khoa Tim Mạch", "Khoa Nhi"...).
+  Ưu điểm vượt trội:
+    - Bảo mật tuyệt đối: Toàn bộ dữ liệu bệnh án không rời khỏi mạng nội bộ.
+    - Khả năng suy luận ngữ cảnh nhiều lượt (multi-turn context understanding).
+    - Tốc độ phản hồi cực nhanh (< 1.5 giây với tham số num_predict: 350).
+    - Tránh được các ca phân luồng sai lệch do triệu chứng ban đầu gây nhầm lẫn.
 
-  Nhiệm vụ 2 – Nhận diện ý định (Intent Recognition):
-    Phân biệt bệnh nhân đang "kể triệu chứng" (SYMPTOM) hay đang "hỏi thủ tục"
-    (FAQ) để hệ thống đưa ra luồng phản hồi phù hợp.
+B. Bẫy Cấp cứu (Red Flag Bypass) & Chống gian lận BHYT:
 
-  Ưu điểm của PhoBERT so với ML truyền thống:
-    - Hiểu được ngữ cảnh hai chiều của câu văn (Bidirectional context).
-    - Xử lý tốt các từ đồng âm, đồng nghĩa trong tiếng Việt.
-    - Không yêu cầu feature engineering thủ công như SVM, Naive Bayes.
-    - Đã được pre-trained sẵn, chỉ cần fine-tune với ít dữ liệu là đạt độ
-      chính xác cao.
-
-B. Thị giác Máy tính (Computer Vision) – Sử dụng YOLOv8 & VietOCR:
-
-  Module này gồm hai bước xử lý liên tiếp:
-
-  Bước 1 – Phát hiện đối tượng với YOLOv8 (You Only Look Once version 8):
-    YOLOv8 là mô hình Object Detection (Phát hiện vật thể) thế hệ mới nhất của
-    Ultralytics, nổi tiếng với tốc độ suy luận (inference) cực nhanh và độ chính
-    xác cao. Trong hệ thống này, YOLOv8 được huấn luyện để:
-      - Phát hiện và định vị thẻ BHYT trong ảnh bệnh nhân gửi vào chat.
-      - Khoanh vùng (Bounding Box) chính xác các trường thông tin quan trọng
-        trên thẻ: Mã số BHYT, Họ và tên, Ngày sinh, Nơi đăng ký KCB ban đầu.
-
-  Bước 2 – Nhận dạng ký tự quang học với VietOCR:
-    Sau khi YOLOv8 cắt ra các vùng ảnh chứa thông tin, VietOCR (một thư viện
-    OCR được tối ưu cho chữ Việt có dấu) sẽ đọc và chuyển đổi các vùng ảnh đó
-    thành chuỗi văn bản (Text) có thể xử lý bằng máy tính.
-    Ví dụ: [Ảnh chứa mã số thẻ] → "DN4010123456789"
-    Kết quả được tự động điền vào form đăng ký khám của hệ thống.
+  - Red Flag Emergency Bypass: Các tình huống nguy kịch (bất tỉnh, ngừng thở, co giật,
+    nôn ra máu, đau ngực vã mồ hôi lạnh) được nhận diện bằng bộ quy tắc ưu tiên cao nhất,
+    tự động bypass toàn bộ AI để cấp số khám Cấp cứu M1 ngay lập tức.
+  - Xác thực BHYT Chính chủ: Kiểm tra thẻ BHYT 15 ký tự đối soát tự động với số CCCD
+    của tài khoản bệnh nhân, ngăn chặn triệt để hành vi mượn thẻ BHYT trái phép.
 
 ───────────────────────────────────────────────────────────
 

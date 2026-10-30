@@ -9,7 +9,7 @@
 
 | Nhân vật | Vai trò | Tài khoản hệ thống |
 |----------|---------|-------------------|
-| **Nguyễn Văn Nghèo** | Bệnh nhân BHYT hộ nghèo | `HN47900000001` / `123456` |
+| **Nguyễn Văn Nghèo** | Bệnh nhân BHYT hộ nghèo | CCCD `079204000001` (BHYT: `HN4790000000001`) / `123456` |
 | **Y tá Lê Thu Nga** | Y tá Khoa Cấp Cứu | `YTA_NGA` / `123456` |
 | **ADMIN Hệ thống** | Quản trị viên | `ADMIN_001` / `Admin@123` |
 | **Màn hình Sảnh** | Màn hình hiển thị công cộng | `/display` (không cần đăng nhập) |
@@ -34,8 +34,9 @@
 
 ```
 Người dùng nhập:
-  - Tên đăng nhập: HN47900000001  (Số BHYT)
+  - Tên đăng nhập: 079204000001  (Số CCCD 12 số)
   - Mật khẩu:      123456
+(Hệ thống đồng thời hỗ trợ tương thích ngược: cho phép đăng nhập bằng số thẻ BHYT cũ)
 ```
 
 ✅ Hệ thống xác thực thành công → chuyển hướng tự động đến trang **Chat AI**.
@@ -53,18 +54,25 @@ Giao diện hiển thị:
 
 **AI (MedBot) xử lý:**
 ```
-[AI gửi request đến FastAPI service phân tích triệu chứng]
+[AI gửi request đến Local AI Ollama qwen2.5-coder:3b — Quy trình Phân luồng 2 Giai đoạn]
 
-Phân tích:
-  - Triệu chứng: đau ngực + khó thở + toát mồ hôi
-  - Nhóm bệnh có thể: Tim mạch, Hô hấp
-  - Mức độ ưu tiên: M2 - KHẨN CẤP (<=15 phút)
-  - Khoa phù hợp: Khoa Tim Mạch / Khoa Cấp Cứu
-  - Độ tin cậy: 92%
-```
+► Giai đoạn 1 (Thăm dò lâm sàng):
+AI nhận định triệu chứng 'đau ngực' có thể do nhiều nguyên nhân (Tim mạch, Hô hấp, Tiêu hóa).
+AI chưa vội chốt khoa mà đặt câu hỏi làm rõ:
+> *"Cơn đau ngực của bạn có cảm giác như thế nào (đau nhói khi hít thở, nóng rát hay đè nặng lồng ngực)? Cơn đau có lan đi đâu và có kèm sốt, ho đờm hay vã mồ hôi lạnh không?"*
 
-AI trả lời:
-> *"Triệu chứng của bạn có thể liên quan đến tim mạch. Tôi sẽ chuyển bạn đến Khoa Cấp Cứu ngay để được thăm khám khẩn cấp."*
+Ông Nghèo trả lời:
+> *"Cơn đau đè nặng như đá đè sau xương ức, lan lên vai và cánh tay trái, người vã nhiều mồ hôi lạnh."*
+
+► Giai đoạn 2 (Chẩn đoán phân biệt & Chốt khoa):
+AI phân tích thông tin mấu chốt: Cơn đau đè nặng + lan tay trái + vã mồ hôi lạnh -> Hướng nhiều đến Hội chứng động mạch vành cấp.
+  - Chẩn đoán phân biệt: Loại trừ Hô hấp (không tăng khi hít sâu), Loại trừ Trào ngược dạ dày
+  - Mức độ ưu tiên: M2 - KHẨN CẤP (đáp ứng <= 15 phút)
+  - Khoa phù hợp: Khoa Cấp Cứu (hoặc Khoa Tim Mạch)
+  - Độ tin cậy: 95%
+
+AI trả lời & xuất Thẻ Tiếp Đón:
+> *"Dựa trên triệu chứng đau đè nặng lồng ngực lan sang tay trái và vã mồ hôi lạnh, tình trạng của bạn cần được theo dõi tim mạch khẩn cấp. Tôi phân luồng bạn vào Khoa Cấp Cứu ngay lập tức."*
 
 ---
 
@@ -249,7 +257,7 @@ Hệ thống tự động:
 ```
  BỆNH NHÂN           HỆ THỐNG AI / SẢNH           Y TÁ PHÒNG KHÁM            BÁC SĨ CHUYÊN KHOA
      │                       │                           │                           │
-     ├─ Đăng nhập BHYT ─────>│                           │                           │
+     ├─ Đăng nhập CCCD ─────>│                           │                           │
      │   (/login)            │                           │                           │
      ├─ Chat triệu chứng ───>│                           │                           │
      │   (/chat)             │                           │                           │
@@ -288,7 +296,7 @@ Hệ thống tự động:
 | Thành phần | Vai trò | Địa chỉ |
 |-----------|---------|---------|
 | **Spring Boot Backend** | Xử lý nghiệp vụ chính | Port `8081` |
-| **FastAPI AI Service** | Phân tích triệu chứng, gợi ý khoa | Python service |
+| **Local AI Ollama (qwen2.5-coder:3b)** | Phân tích triệu chứng, gợi ý khoa | Port 11434 (Local LLM) |
 | **PostgreSQL** | Lưu trữ users, tickets, departments | `hospital_db` |
 | **Thymeleaf Templates** | Giao diện web server-side render | `src/main/resources/templates/` |
 | **Spring Security** | Xác thực & phân quyền (PATIENT/NURSE/DOCTOR/ADMIN) | `HmsUserDetailsService` |
@@ -319,4 +327,4 @@ Hệ thống tự động:
 
 ---
 
-*Tài liệu được tạo ngày 06/10/2026 — MedAssist AI Hospital Queue System v1.0*
+*Tài liệu được tạo ngày 06/10/2026 — MedAssist AI Hospital Queue System v2.0 (Kiến trúc Local AI & CCCD)*
