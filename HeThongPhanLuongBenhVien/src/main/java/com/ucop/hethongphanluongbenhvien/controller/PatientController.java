@@ -3,7 +3,10 @@ package com.ucop.hethongphanluongbenhvien.controller;
 import com.ucop.hethongphanluongbenhvien.entity.ChatMessage;
 import com.ucop.hethongphanluongbenhvien.entity.Ticket;
 import com.ucop.hethongphanluongbenhvien.entity.User;
+import com.ucop.hethongphanluongbenhvien.entity.VisitRecord;
 import com.ucop.hethongphanluongbenhvien.repository.UserRepository;
+import com.ucop.hethongphanluongbenhvien.repository.VisitRecordRepository;
+import com.ucop.hethongphanluongbenhvien.repository.PrescriptionRepository;
 import com.ucop.hethongphanluongbenhvien.service.ChatService;
 import com.ucop.hethongphanluongbenhvien.service.DepartmentService;
 import com.ucop.hethongphanluongbenhvien.service.TicketService;
@@ -31,7 +34,9 @@ public class PatientController {
     private final TicketService     ticketService;
     private final ChatService       chatService;
     private final DepartmentService departmentService;
-    private final UserRepository    userRepository;
+    private final UserRepository        userRepository;
+    private final VisitRecordRepository visitRecordRepository;
+    private final PrescriptionRepository prescriptionRepository;
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
 

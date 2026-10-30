@@ -90,5 +90,12 @@ public class VisitRecord {
         COMPLETED,   // Hoàn tất
         CANCELLED    // Đã hủy
     }
-}
 
+    public String getDepartmentName() {
+        return department != null ? department.getName() : "";
+    }
+
+    public String getDoctorName() {
+        return doctor != null ? doctor.getFullName() : null;
+    }
+}

@@ -56,5 +56,8 @@ public class Prescription {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = true)
     private LocalDateTime createdAt;
-}
 
+    public String getMedicineName() {
+        return medicine != null ? medicine.getName() : "";
+    }
+}

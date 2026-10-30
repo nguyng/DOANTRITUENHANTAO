@@ -3,11 +3,15 @@ package com.ucop.hethongphanluongbenhvien.service;
 import com.ucop.hethongphanluongbenhvien.entity.Department;
 import com.ucop.hethongphanluongbenhvien.entity.Ticket;
 import com.ucop.hethongphanluongbenhvien.entity.User;
+import com.ucop.hethongphanluongbenhvien.entity.VisitRecord;
 import com.ucop.hethongphanluongbenhvien.repository.TicketRepository;
+import com.ucop.hethongphanluongbenhvien.repository.VisitRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +23,7 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final DepartmentService departmentService;
+    private final VisitRecordRepository visitRecordRepository;
 
     // ── Tạo phiếu khám ─────────────────────────────────────────────────────────
 
@@ -126,7 +131,50 @@ public class TicketService {
         Ticket ticket = findById(ticketId);
         ticket.setStatus(Ticket.Status.DONE);
         ticket.setDoneAt(LocalDateTime.now());
-        return ticketRepository.save(ticket);
+        ticket = ticketRepository.save(ticket);
+
+        // Tự động tạo hồ sơ khám bệnh (VisitRecord)
+        createVisitRecordIfAbsent(ticket);
+
+        return ticket;
+    }
+
+    /** Tự động sinh hồ sơ bệnh án VisitRecord từ phiếu khám hoàn thành */
+    @Transactional
+    public VisitRecord createVisitRecordIfAbsent(Ticket ticket) {
+        if (ticket == null || ticket.getId() == null) return null;
+        if (visitRecordRepository.existsByTicketId(ticket.getId())) {
+            return visitRecordRepository.findByTicketId(ticket.getId()).orElse(null);
+        }
+
+        User patient = ticket.getPatient();
+        BigDecimal baseCost = new BigDecimal("150000"); // Phí khám chuyên khoa chuẩn
+        BigDecimal discountRate = (patient != null && patient.getBhytDiscountRate() != null)
+                ? patient.getBhytDiscountRate()
+                : BigDecimal.ZERO;
+        BigDecimal insurancePaid = baseCost.multiply(discountRate);
+        BigDecimal finalCost = baseCost.subtract(insurancePaid);
+
+        String deptName = ticket.getDepartment() != null ? ticket.getDepartment().getName() : "Chuyên khoa";
+
+        VisitRecord record = VisitRecord.builder()
+                .patient(patient)
+                .department(ticket.getDepartment())
+                .doctor(ticket.getCalledByNurse())
+                .ticket(ticket)
+                .visitName("Khám " + deptName)
+                .visitDate(LocalDate.now())
+                .status(VisitRecord.Status.COMPLETED)
+                .diagnosis(ticket.getAiSummary() != null && !ticket.getAiSummary().isBlank()
+                        ? ticket.getAiSummary()
+                        : "Khám theo phân luồng thông minh AI")
+                .originalCost(baseCost)
+                .insurancePaid(insurancePaid)
+                .finalCost(finalCost)
+                .notes("Đã hoàn tất quy trình khám bệnh.")
+                .build();
+
+        return visitRecordRepository.save(record);
     }
 
     /** Chuyển khoa — y tá override quyết định của AI */
