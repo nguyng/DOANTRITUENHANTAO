@@ -7,6 +7,7 @@ import com.ucop.hethongphanluongbenhvien.entity.User;
 import com.ucop.hethongphanluongbenhvien.repository.FaqRepository;
 import com.ucop.hethongphanluongbenhvien.repository.UserRepository;
 import com.ucop.hethongphanluongbenhvien.repository.VisitRecordRepository;
+import com.ucop.hethongphanluongbenhvien.repository.AiAnalysisLogRepository;
 import com.ucop.hethongphanluongbenhvien.service.AdminService;
 import com.ucop.hethongphanluongbenhvien.service.DepartmentService;
 import com.ucop.hethongphanluongbenhvien.service.TicketService;
@@ -32,6 +33,7 @@ public class AdminController {
     private final TicketService     ticketService;
     private final FaqRepository     faqRepository;
     private final VisitRecordRepository visitRecordRepository;
+    private final AiAnalysisLogRepository aiAnalysisLogRepository;
 
     // ── Helper ───────────────────────────────────────────────────────────────────
 
@@ -180,5 +182,15 @@ public class AdminController {
             ra.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/admin/departments";
+    }
+
+    // ── Logs hệ thống / Nhật ký phân luồng AI ─────────────────────────────────────
+
+    @GetMapping("/logs")
+    public String systemLogs(Model model, @AuthenticationPrincipal UserDetails ud) {
+        model.addAttribute("currentPage", "logs");
+        addAdminAttrs(model, ud);
+        model.addAttribute("logs", aiAnalysisLogRepository.findAllByOrderByCreatedAtDesc());
+        return "admin/logs";
     }
 }

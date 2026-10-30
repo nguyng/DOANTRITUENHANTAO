@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Nhật ký phân luồng AI')}"></head>
+<body class="min-h-screen bg-medical-bg">
+    <div th:replace="~{fragments/sidebar-admin :: sidebar}"></div>
+
+    <main class="ml-64 p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-800">🤖 Nhật ký Phân luồng AI</h1>
+                <p class="text-sm text-slate-500 mt-1">Lịch sử phân tích triệu chứng của mô hình trí tuệ nhân tạo và can thiệp của nhân viên y tế</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-semibold border border-emerald-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Mô hình AI trực tuyến
+                </span>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tổng lượt AI phân tích</p>
+                        <p class="text-2xl font-black text-slate-800 mt-1" th:text="">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                        <i data-lucide="cpu" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tỷ lệ chính xác ước tính</p>
+                        <p class="text-2xl font-black text-emerald-600 mt-1">94.8%</p>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
+                        <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Can thiệp chuyển khoa</p>
+                        <p class="text-2xl font-black text-orange-500 mt-1"
+                           th:text="">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
+                        <i data-lucide="git-compare" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search / Filter -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
+            <div class="relative">
+                <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="logSearch" placeholder="Tìm theo triệu chứng, khoa dự đoán, mô hình AI..."
+                       class="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-primary focus:outline-none transition-all">
+            </div>
+        </div>
+
+        <!-- Logs Table -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="logsTable">
+                    <thead>
+                        <tr class="bg-slate-50 text-left text-xs text-slate-400 uppercase tracking-wider">
+                            <th class="px-6 py-4">Thời gian</th>
+                            <th class="px-6 py-4">Triệu chứng bệnh nhân mô tả</th>
+                            <th class="px-6 py-4">Khoa AI dự đoán</th>
+                            <th class="px-6 py-4 text-center">Độ tin cậy</th>
+                            <th class="px-6 py-4 text-center">Xử lý (ms)</th>
+                            <th class="px-6 py-4 text-center">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr th:if="">
+                            <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                                <i data-lucide="activity" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+                                Chưa có nhật ký phân tích AI nào được ghi nhận.
+                            </td>
+                        </tr>
+                        <tr th:each="l : " class="hover:bg-slate-50/80 transition-colors log-row">
+                            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500"
+                                th:text=" ?  : '—'">
+                                14:30:00 20/09/2026
+                            </td>
+                            <td class="px-6 py-4 max-w-xs">
+                                <p class="text-sm font-medium text-slate-800 truncate log-input"
+                                   th:title="" th:text=" ?: '—'">Tôi bị đau tức ngực...</p>
+                                <span class="text-[11px] text-slate-400 font-mono" th:text=" ?: 'Hybrid-Triage-v2'">Hybrid-Triage-v2</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="font-semibold text-slate-800 log-dept" th:text=" ?: 'Chưa xác định'">Khoa Tim Mạch</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span th:if=""
+                                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold"
+                                      th:classappend=" ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                      th:text="">92%</span>
+                                <span th:unless="" class="text-slate-400 text-xs">—</span>
+                            </td>
+                            <td class="px-6 py-4 text-center font-mono text-xs text-slate-600"
+                                th:text="">
+                                45 ms
+                            </td>
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <span th:if="" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-50 text-orange-700"
+                                      th:title="'Y tá đã chuyển sang: ' + ">
+                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Điều chỉnh
+                                </span>
+                                <span th:unless="" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                                    <i data-lucide="check" class="w-3.5 h-3.5"></i> Chuẩn xác
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <script>
+        lucide.createIcons();
+
+        const searchInput = document.getElementById('logSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+                const rows = document.querySelectorAll('.log-row');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(query) ? '' : 'none';
+                });
+            });
+        }
+    </script>
+</body>
+</html>

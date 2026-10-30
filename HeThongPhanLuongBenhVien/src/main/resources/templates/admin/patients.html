@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/head :: head('Quản lý bệnh nhân')}"></head>
+<body class="min-h-screen bg-medical-bg">
+    <div th:replace="~{fragments/sidebar-admin :: sidebar}"></div>
+
+    <main class="ml-64 p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-800">🧑‍🤝‍🧑 Quản lý bệnh nhân</h1>
+                <p class="text-sm text-slate-500 mt-1">Danh sách hồ sơ bệnh nhân, thông tin định danh và bảo hiểm y tế</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/bhyt/check" target="_blank"
+                   class="px-4 py-2.5 bg-emerald-50 text-emerald-700 font-semibold rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-all text-sm flex items-center gap-2">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i> Tra cứu BHYT nhanh
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tổng bệnh nhân</p>
+                        <p class="text-2xl font-black text-slate-800 mt-1" th:text="">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                        <i data-lucide="users" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Có thẻ BHYT</p>
+                        <p class="text-2xl font-black text-emerald-600 mt-1"
+                           th:text="">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
+                        <i data-lucide="shield" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Đang hoạt động</p>
+                        <p class="text-2xl font-black text-blue-600 mt-1"
+                           th:text="">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                        <i data-lucide="user-check" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
+            <div class="relative">
+                <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="patientSearch" placeholder="Tìm theo họ tên, số điện thoại, mã thẻ BHYT hoặc CCCD..."
+                       class="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-primary focus:outline-none transition-all">
+            </div>
+        </div>
+
+        <!-- Patient Table -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="patientTable">
+                    <thead>
+                        <tr class="bg-slate-50 text-left text-xs text-slate-400 uppercase tracking-wider">
+                            <th class="px-6 py-4">Bệnh nhân</th>
+                            <th class="px-6 py-4">Số điện thoại</th>
+                            <th class="px-6 py-4">Bảo hiểm Y tế (BHYT)</th>
+                            <th class="px-6 py-4">Mức hưởng</th>
+                            <th class="px-6 py-4">Hạn thẻ BHYT</th>
+                            <th class="px-6 py-4 text-center">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr th:if="">
+                            <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                                <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+                                Chưa có hồ sơ bệnh nhân nào trong hệ thống
+                            </td>
+                        </tr>
+                        <tr th:each="p : " class="hover:bg-slate-50/80 transition-colors patient-row">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center text-primary font-bold text-xs"
+                                         th:text="">N</div>
+                                    <div>
+                                        <p class="font-semibold text-slate-800 patient-name" th:text="">Nguyễn Văn A</p>
+                                        <p class="text-xs text-slate-400">
+                                            <span th:if="" th:text="">01/01/1990</span>
+                                            <span th:if=""> · </span>
+                                            <span th:if="" th:text="">Nam</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 font-mono text-slate-600 patient-phone" th:text=" ?: '—'">0901234567</td>
+                            <td class="px-6 py-4">
+                                <div th:if="">
+                                    <span class="font-mono font-semibold text-slate-800 patient-bhyt" th:text="">DN47900000001</span>
+                                    <p class="text-xs text-slate-400" th:text=" ?: 'BHYT Doanh nghiệp'"></p>
+                                </div>
+                                <span th:unless="" class="text-slate-400 text-xs italic">Không có thẻ</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span th:if=""
+                                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
+                                      th:classappend=" ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'"
+                                      th:text="">80%</span>
+                                <span th:unless="" class="text-slate-400 text-xs">—</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div th:if="">
+                                    <p class="text-xs font-medium"
+                                       th:classappend=" ? 'text-red-500 font-bold' : 'text-slate-600'"
+                                       th:text="">31/12/2026</p>
+                                    <span th:if=""
+                                          class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">Hết hạn</span>
+                                </div>
+                                <span th:unless="" class="text-slate-400 text-xs">—</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span th:if="" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Hoạt động
+                                </span>
+                                <span th:unless="" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                                    <span class="w-1.5 h-1.5 bg-slate-400 rounded-full"></span> Khóa
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <script>
+        lucide.createIcons();
+
+        // Client-side quick filter
+        const searchInput = document.getElementById('patientSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+                const rows = document.querySelectorAll('.patient-row');
+                rows.forEach(row => {
+                    const name = row.querySelector('.patient-name')?.textContent.toLowerCase() || '';
+                    const phone = row.querySelector('.patient-phone')?.textContent.toLowerCase() || '';
+                    const bhyt = row.querySelector('.patient-bhyt')?.textContent.toLowerCase() || '';
+                    if (name.includes(query) || phone.includes(query) || bhyt.includes(query)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
