@@ -5,7 +5,7 @@
 ## 1. BFD — Biểu đồ phân rã chức năng
 
 ```mermaid
-graph TD
+graph LR
     ROOT["🏥 HỆ THỐNG MEDASSIST AI"]
 
     ROOT --> A["1. Quản lý Người dùng"]
@@ -147,7 +147,7 @@ graph LR
 ## 4. DFD Mức 1 — Luồng 1: Phân tích triệu chứng
 
 ```mermaid
-graph TD
+graph LR
     BN["👤 Bệnh nhân"]
     P1(["1.1\nPhân loại Intent"])
     P2(["1.2\nPhoBERT\nPhân tích triệu chứng"])
@@ -178,7 +178,7 @@ graph TD
 ## 5. DFD Mức 1 — Luồng 2: Xác thực & Đối soát Thẻ BHYT Chính chủ
 
 ```mermaid
-graph TD
+graph LR
     BN["👤 Bệnh nhân"]
     P1(["2.1\nNhập mã BHYT\n15 ký tự"])
     P2(["2.2\nKiểm tra Format\n& Tra cứu DB/BHXH"])
@@ -663,8 +663,8 @@ graph TB
 ## 16. Sitemap — Navigation Flow theo Role
 
 ```mermaid
-graph TD
-    LOGIN["/login\n🔐 Đăng nhập Mã BHYT"]
+graph LR
+    LOGIN["/login\n🔐 Đăng nhập CCCD / BHYT"]
 
     LOGIN -->|"role: PATIENT"| P_CHAT
     LOGIN -->|"role: NURSE"| N_QUEUE
@@ -755,7 +755,7 @@ flowchart TD
 ```
 
 ```mermaid
-graph TD
+graph LR
     ROOT["🏥 HỆ THỐNG MEDASSIST AI"]
 
     ROOT --> A["1. Quản lý Người dùng"]
