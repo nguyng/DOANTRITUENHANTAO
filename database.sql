@@ -266,12 +266,12 @@ INSERT INTO USERS (id, bhyt_number, password_hash, full_name, role, department_i
 
 -- 3. Insert Bệnh nhân mẫu (Mật khẩu mặc định: 123456 => bcrypt format: $2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.)
 INSERT INTO USERS (id, cccd, bhyt_number, password_hash, full_name, role, dob, gender, bhyt_object_code, bhyt_object_name, bhyt_discount_rate, bhyt_expiry_date) VALUES
-(uuid_generate_v4(), '079204000001', 'HN47900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Văn Nghèo', 'PATIENT', '1985-05-15', 'Nam', 'HN', 'Hộ nghèo', 1.00, '2028-12-31'),
-(uuid_generate_v4(), '079204000002', 'CN37900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Phạm Thị Cận', 'PATIENT', '1990-08-20', 'Nữ', 'CN', 'Cận nghèo', 0.95, '2027-12-31'),
-(uuid_generate_v4(), '079204000003', 'TE17900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Trần Bé Nam', 'PATIENT', '2020-01-10', 'Nam', 'TE', 'Trẻ em dưới 6 tuổi', 1.00, '2028-06-30'),
-(uuid_generate_v4(), '079204000004', 'HS47900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Học Sinh', 'PATIENT', '2010-09-05', 'Nam', 'HS', 'Học sinh/Sinh viên', 0.80, '2025-08-31'),
-(uuid_generate_v4(), '079204000005', 'DN47900000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Thị Lan', 'PATIENT', '1992-11-25', 'Nữ', 'DN', 'Người lao động', 0.80, '2026-12-31'),
-(uuid_generate_v4(), '079204000006', 'DN47900099001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Test Thẻ Hết Hạn', 'PATIENT', '1988-02-14', 'Nam', 'DN', 'Người lao động', 0.80, '2023-01-01');
+(uuid_generate_v4(), '079204000001', 'HN4790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Văn Nghèo', 'PATIENT', '1985-05-15', 'Nam', 'HN', 'Hộ nghèo', 1.00, '2028-12-31'),
+(uuid_generate_v4(), '079204000002', 'CN3790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Phạm Thị Cận', 'PATIENT', '1990-08-20', 'Nữ', 'CN', 'Cận nghèo', 0.95, '2027-12-31'),
+(uuid_generate_v4(), '079204000003', 'TE1790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Trần Bé Nam', 'PATIENT', '2020-01-10', 'Nam', 'TE', 'Trẻ em dưới 6 tuổi', 1.00, '2028-06-30'),
+(uuid_generate_v4(), '079204000004', 'HS4790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Học Sinh', 'PATIENT', '2010-09-05', 'Nam', 'HS', 'Học sinh/Sinh viên', 0.80, '2025-08-31'),
+(uuid_generate_v4(), '079204000005', 'DN4790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Thị Lan', 'PATIENT', '1992-11-25', 'Nữ', 'DN', 'Người lao động', 0.80, '2026-12-31'),
+(uuid_generate_v4(), '079204000006', 'DN4790009900001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Test Thẻ Hết Hạn', 'PATIENT', '1988-02-14', 'Nam', 'DN', 'Người lao động', 0.80, '2023-01-01');
 
 -- 4. Insert Dịch vụ & Thuốc đa dạng hơn
 INSERT INTO MEDICAL_SERVICES (name, price, is_bhyt_covered, bhyt_price_limit) VALUES
