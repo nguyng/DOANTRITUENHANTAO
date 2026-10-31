@@ -182,30 +182,31 @@ B. Bẫy Cấp cứu (Red Flag Bypass) & Chống gian lận BHYT:
 
 Luồng xử lý tổng quát của hệ thống như sau:
 
-  Bệnh nhân gửi tin nhắn/ảnh
+  Bệnh nhân đăng nhập bằng CCCD 12 số
            │
            ▼
-  [WebSocket Server – Real-time Chat]
+  [Giao diện Chat Tiếp Đón – Spring Boot :8081]
            │
-           ├── Tin nhắn văn bản ──► [PhoBERT Model]
-           │                              │
-           │                    ┌─────────┴──────────┐
-           │                    ▼                    ▼
-           │              Phân loại              Nhận diện
-           │              Chuyên khoa            ý định
-           │              (Text Clf)             (Intent)
-           │                    │                    │
-           │                    └────────┬───────────┘
-           │                             ▼
-           │                     Trả lời thông minh
+           ├── Nhập số thẻ BHYT 15 ký tự ──► [BHYT Engine: Đối soát khớp CCCD]
+           │                                          │
+           │                                          ▼
+           │                                Áp dụng giảm trừ viện phí
            │
-           └── Ảnh thẻ BHYT ──► [YOLOv8 Detection]
-                                         │
-                                         ▼
-                                 [VietOCR – Đọc chữ]
-                                         │
-                                         ▼
-                                 Tự động điền form
+           └── Bệnh nhân mô tả triệu chứng
+                       │
+                       ▼
+           Kiểm tra Red Flag Cấp Cứu?
+             ├── CÓ ──► [Cấp số Cấp Cứu M1 khẩn cấp - Bypass AI]
+             └── KHÔNG
+                   │
+                   ▼
+           [Local AI Ollama qwen2.5-coder:3b :11434]
+                   │
+                   ├── Lượt 1: Hỏi sâu triệu chứng mấu chốt (Probe)
+                   └── Lượt 2: Chốt chuyên khoa & Mức ưu tiên M1-M5 (Decision)
+                                   │
+                                   ▼
+                           Xuất Thẻ Tiếp Đón & Phiếu Khám
 
 ═══════════════════════════════════════════════════════════
 
