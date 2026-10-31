@@ -207,7 +207,6 @@ Luồng xử lý tổng quát của hệ thống như sau:
                                    │
                                    ▼
                            Xuất Thẻ Tiếp Đón & Phiếu Khám
-
 ═══════════════════════════════════════════════════════════
 
 (Hết Chương 1 – Tổng quan Đề tài)

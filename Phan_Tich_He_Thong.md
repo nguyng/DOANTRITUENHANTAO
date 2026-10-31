@@ -359,3 +359,440 @@ Bệnh nhân nhập mã thẻ BHYT 15 ký tự (chuẩn QĐ 1666)
 │  └─ NẾU KHỚP -> Áp dụng giảm trừ viện phí 100%   │
 └──────────────────────────────────────────────────┘
 ```
+
+---
+
+## 5. THIẾT KẾ GIAO DIỆN (UI/UX Design)
+
+### 5.1. Sơ đồ màn hình (Screen Map)
+
+```
+PUBLIC (Chưa đăng nhập)
+├── /login                ← Đăng nhập bằng CCCD 12 số (hoặc BHYT) + mật khẩu
+└── /display/:deptId      ← Màn hình hành lang (Public)
+
+BỆNH NHÂN (PATIENT role) — Sau khi đăng nhập
+├── /chat                 ← Giao diện Chat chính với AI
+├── /ticket               ← Xem phiếu khám & STT hiện tại
+│
+├── /profile              ← 📋 THÔNG TIN CÁ NHÂN
+│   ├── Họ tên, SĐT, Email, Ngày sinh, Giới tính, Địa chỉ
+│   ├── ★ Mã BHYT (do hệ thống cấp, không đổi được)
+│   ├── ★ Mức giảm bảo hiểm (VD: 80%)
+│   └── ★ Hạn sử dụng thẻ BHYT (có cảnh báo sắp hết hạn)
+│
+└── /visits               ← 🏥 LỊCH SỬ KHÁM BỆNH
+    ├── [Danh sách] Mỗi item: Tên lần khám + Ngày + Giá thực trả
+    └── /visits/:visitId  ← Chi tiết lần khám
+        ├── Tên lần khám (VD: Khám tổng quát)
+        ├── Khoa khám
+        ├── Bác sĩ phụ trách
+        ├── Chẩn đoán bệnh
+        ├── Giá gốc (trước BH)
+        ├── Bảo hiểm trả (giá gốc × mức %)
+        ├── Số tiền bệnh nhân thực trả
+        └── Đơn thuốc chi tiết (tên thuốc, liều dùng, số lượng, giá)
+
+Y TÁ / LỄ TÂN (NURSE role)
+├── /nurse/queue          ← Dashboard hàng đợi chính
+├── /nurse/queue/:deptId  ← Hàng đợi chi tiết từng khoa
+└── /nurse/search         ← Tra cứu bệnh nhân
+
+QUẢN TRỊ VIÊN (ADMIN role)
+├── /admin/dashboard      ← Thống kê tổng quan
+├── /admin/patients       ← ★ Quản lý & CẤP tài khoản bệnh nhân
+├── /admin/departments    ← Quản lý Khoa/Phòng
+├── /admin/staff          ← Quản lý tài khoản nhân viên
+├── /admin/faq            ← Cấu hình câu trả lời tự động
+├── /admin/reports        ← Báo cáo & xuất file
+└── /admin/logs           ← Nhật ký hệ thống
+```
+
+### 5.2. Mô tả Màn hình chính — Giao diện Chat AI
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  🏥 MedAssist AI        [Bệnh viện Đa khoa X]  [👤 Lan]  │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │                                                    │  │
+│  │  🤖 Xin chào Nguyễn Thị Lan! Tôi là MedBot,      │  │
+│  │     trợ lý ảo của bệnh viện. Hôm nay bạn có      │  │
+│  │     thể mô tả triệu chứng hoặc đặt câu hỏi.      │  │
+│  │                                          11:20 AM  │  │
+│  │                                                    │  │
+│  │          [👤] Tôi bị đau đầu từ sáng, kèm         │  │
+│  │               sốt nhẹ 38 độ và chóng mặt         │  │
+│  │                                          11:21 AM  │  │
+│  │                                                    │  │
+│  │  🤖 Tôi đã phân tích triệu chứng của bạn.         │  │
+│  │     ─────────────────────────────────────         │  │
+│  │     🟡 Mức độ: Trung bình                         │  │
+│  │     🏥 Gợi ý khoa: Khoa Nội Thần kinh            │  │
+│  │     📊 Độ phù hợp: 89%                           │  │
+│  │     ─────────────────────────────────────         │  │
+│  │     Bạn có muốn đăng ký khám tại Khoa này?       │  │
+│  │     [✅ Xác nhận đăng ký] [🔄 Đổi khoa]          │  │
+│  │                                          11:21 AM  │  │
+│  │                                                    │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  Câu hỏi gợi ý:                                         │
+│  [Giờ làm việc?] [Cần mang giấy tờ gì?] [Chi phí?]     │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│  [📎 Gửi ảnh]  [    Nhập tin nhắn...        ] [➤ Gửi]  │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. SƠ ĐỒ USE CASE
+
+### 6.1. Use Case Tổng quát
+
+```
+                         ┌──────────────────────────────────────────────────┐
+                         │              HỆ THỐNG MedAssist                   │
+                         │                                                  │
+  ┌─────────────┐        │  ┌────────────────────────────────────────────┐  │
+  │             │        │  │  UC-01: Đăng nhập bằng CCCD 12 số (hoặc BHYT) + mật khẩu │  │
+  │  BỆNH NHÂN  │───────►│  │  UC-02: Đổi mật khẩu lần đầu đăng nhập    │  │
+  │             │        │  │  UC-03: Xem thông tin cá nhân & BH         │  │
+  │             │───────►│  │  UC-04: Xem lịch sử khám bệnh (danh sách)  │  │
+  │             │───────►│  │  UC-05: Xem chi tiết lần khám + đơn thuốc  │  │
+  │             │───────►│  │  UC-06: Chat với Trợ lý ảo AI              │  │
+  │             │───────►│  │  UC-07: Gửi ảnh thẻ BHYT (OCR nhận diện)  │  │
+  │             │───────►│  │  UC-08: Nhận phân luồng Khoa từ AI         │  │
+  │             │───────►│  │  UC-09: Bốc số / Xem phiếu khám            │  │
+  │             │◄───────│  │  UC-10: Nhận thông báo đến lượt            │  │
+  └─────────────┘        │  │  UC-11: Hủy phiếu khám                     │  │
+                         │  └────────────────────────────────────────────┘  │
+  ┌─────────────┐        │  ┌────────────────────────────────────────────┐  │
+  │             │        │  │  UC-12: Xem hàng đợi theo khoa             │  │
+  │   Y TÁ /   │───────►│  │  UC-13: Gọi số tiếp theo                   │  │
+  │  LỄ TÂN    │───────►│  │  UC-14: Điều chuyển bệnh nhân sang khoa    │  │
+  │             │───────►│  │  UC-15: Tra cứu hồ sơ bệnh nhân            │  │
+  └─────────────┘        │  └────────────────────────────────────────────┘  │
+                         │  ┌────────────────────────────────────────────┐  │
+  ┌─────────────┐        │  │  ★UC-16: Tạo & cấp tài khoản bệnh nhân   │  │
+  │             │───────►│  │         (sinh Mã BHYT, nhập mức BH, hạn BH)│ │
+  │   ADMIN     │───────►│  │  UC-17: Quản lý Khoa/Phòng                │  │
+  │             │───────►│  │  UC-18: Quản lý tài khoản nhân viên        │  │
+  │             │───────►│  │  UC-19: Xem thống kê & báo cáo            │  │
+  │             │───────►│  │  UC-20: Cấu hình câu FAQ                   │  │
+  └─────────────┘        │  │  UC-21: Xem Logs hệ thống                  │  │
+                         │  └────────────────────────────────────────────┘  │
+  ┌─────────────┐        │  ┌────────────────────────────────────────────┐  │
+  │  MÀN HÌNH  │◄───────│  │  UC-22: Hiển thị STT hành lang             │  │
+  │  HÀNH LANG  │        │  │  UC-23: Text-to-Speech gọi số              │  │
+  └─────────────┘        │  └────────────────────────────────────────────┘  │
+                         └──────────────────────────────────────────────────┘
+```
+
+### 6.2. Mô tả chi tiết — Màn hình Thông tin cá nhân & Lịch sử khám
+
+**Màn hình Thông tin cá nhân (`/profile`):**
+```
+┌───────────────────────────────────────────────────────┐
+│  👤 Thông tin cá nhân                                │
+├───────────────────────────────────────────────────────┤
+│  [Ảnh đại diện]                                       │
+│  Họ và tên:  Nguyễn Thị Lan                          │
+│  Ngày sinh:  15/03/1990  |  Giới tính: Nữ            │
+│  SĐT:        0901234567                               │
+│  Email:      lan.nguyen@email.com                     │
+│  Địa chỉ:   123 Lý Thường Kiệt, Q.10, TP.HCM        │
+├───────────────────────────────────────────────────────┤
+│  🏥 Thông tin Bảo hiểm Y tế                          │
+│  Mã BHYT:       DN4 1234567890  [Không đổi được]     │
+│  Mức giảm BH:   80%                                  │
+│  Hạn sử dụng:   31/12/2026  ⚠️ Còn 3 tháng         │
+└───────────────────────────────────────────────────────┘
+```
+
+**Màn hình Lịch sử khám (`/visits`):**
+```
+┌───────────────────────────────────────────────────────┐
+│  🏥 Lịch sử Khám bệnh                               │
+├───────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────┐ │
+│  │  Khám tổng quát                    20/08/2026  │ │
+│  │  Khoa Nội tổng quát               150,000 đ ►  │ │
+│  └─────────────────────────────────────────────────┘ │
+│  ┌─────────────────────────────────────────────────┐ │
+│  │  Khám chuyên khoa Thần kinh        05/06/2026  │ │
+│  │  Khoa Thần kinh                    60,000 đ ►  │ │
+│  └─────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────┘
+
+--- Khi nhấn vào một lần khám (Chi tiết /visits/:id) ---
+
+┌───────────────────────────────────────────────────────┐
+│  ← Khám tổng quát  —  20/08/2026                     │
+├───────────────────────────────────────────────────────┤
+│  Khoa:    Nội tổng quát — Phòng 201                  │
+│  Bác sĩ:  BS. Trần Văn Minh                          │
+│  Chẩn đoán: Viêm họng cấp, sốt virus                 │
+├───────────────────────────────────────────────────────┤
+│  💊 Đơn thuốc                                        │
+│  ┌────────────────────────────┬──────┬───────────┐   │
+│  │ Tên thuốc                  │ SL   │ Thành tiền│   │
+│  ├────────────────────────────┼──────┼───────────┤   │
+│  │ Paracetamol 500mg          │ 20 v │  40,000 đ │   │
+│  │ Amoxicillin 500mg          │ 21 v │  63,000 đ │   │
+│  │ Loratadine 10mg            │ 10 v │  25,000 đ │   │
+│  └────────────────────────────┴──────┴───────────┘   │
+├───────────────────────────────────────────────────────┤
+│  💰 Chi phí                                          │
+│  Giá gốc (khám + thuốc):      750,000 đ             │
+│  Bảo hiểm chi trả (80%):    - 600,000 đ             │
+│  ─────────────────────────────────────               │
+│  Bệnh nhân thực trả:          150,000 đ             │
+└───────────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. SEQUENCE DIAGRAM — Luồng chính
+
+### 7.1. Bệnh nhân gửi triệu chứng → Nhận số thứ tự
+
+```
+Bệnh nhân    WebSocket     Spring Boot    NLP Service    Database    Redis Queue
+     │            │              │               │             │           │
+     │──send msg─►│              │               │             │           │
+     │            │──save msg───►│               │             │           │
+     │            │              │──POST analyze─►│             │           │
+     │            │              │◄──{dept, conf}─│             │           │
+     │            │              │──save AI log──►│             │           │
+     │            │              │──push bot reply►              │           │
+     │◄───────────────────────── "Khoa Thần kinh (89%)"        │           │
+     │            │              │               │             │           │
+     │──confirm──►│              │               │             │           │
+     │            │──create ticket──────────────►│             │           │
+     │            │              │               │──get next───────────────►│
+     │            │              │               │◄──ticket_no #47──────────│
+     │            │              │──save ticket──►│             │           │
+     │            │              │──incr queue───────────────────────────── ►│
+     │            │──push ticket►│               │             │           │
+     │◄─────────── "STT #47 - Khoa TK - Phòng 302"            │           │
+     │            │              │               │             │           │
+     │            │──broadcast──►│               │     [Dashboard Y tá]    │
+     │            │              │─────────────────── WebSocket push ──────►│
+     │            │              │               │    "Có bệnh nhân mới"   │
+```
+
+---
+
+## 8. CÁC MÔ HÌNH AI — Chi tiết Kỹ thuật
+
+### 8.1. Mô hình NLP — PhoBERT Fine-tuned
+
+| Thông số | Chi tiết |
+|---------|----------|
+| **Base Model** | `vinai/phobert-base` (HuggingFace) |
+| **Task 1** | Text Classification: Phân luồng Khoa (10–15 classes) |
+| **Task 2** | Sequence Classification: Phân loại Intent (FAQ / SYMPTOM / OTHER) |
+| **Task 3** | Sentiment Analysis: Phát hiện lo lắng/hoảng loạn |
+| **Framework** | PyTorch + HuggingFace Transformers |
+| **Input** | Chuỗi văn bản tiếng Việt đã segment (max 256 tokens) |
+| **Output** | `{class_label, confidence_score, top_3_predictions}` |
+| **Training** | Fine-tune 3–5 epochs trên dataset triệu chứng y tế tiếng Việt |
+| **Metrics** | Accuracy, F1-Score, Confusion Matrix |
+
+### 8.2. Quy chuẩn Xác thực Thẻ BHYT 15 ký tự & Đối soát CCCD
+
+| Thông số | Chi tiết |
+|---------|----------|
+| **Tiêu chuẩn mã thẻ** | Quyết định 1666/QĐ-BHXH (chuẩn 15 ký tự) |
+| **Cơ chế xác thực** | 3 lớp: Regex Format -> DB nội bộ -> Cổng tra cứu BHXH |
+| **Kiểm soát chính chủ** | Đối soát 1:1 với CCCD 12 số của tài khoản đăng nhập |
+| **Mức hưởng tự động** | Mức 1, 2: 100% · Mức 3: 95% · Mức 4: 80% chi phí KCB |
+| **Bảo vệ gian lận** | Trả về HTTP 403 Forbidden nếu số BHYT không thuộc CCCD |
+| **Hiệu năng xử lý** | < 5ms (xử lý trực tiếp trong bộ nhớ và index database) |
+
+---
+
+## 9. BẢO MẬT & PHI CÔNG NGHỆ (Security Design)
+
+### 9.1. Chiến lược Bảo mật
+
+| Vấn đề | Giải pháp |
+|--------|-----------|
+| **Xác thực người dùng** | JWT Access Token (15 phút) + Refresh Token (7 ngày) |
+| **Phân quyền** | Spring Security với `@PreAuthorize`, Role-Based Access Control |
+| **Dữ liệu nhạy cảm** | Mã hóa CCCD, mã BHYT trong DB (AES-256) |
+| **Upload ảnh** | Giới hạn size (5MB), chỉ chấp nhận JPEG/PNG, scan virus |
+| **Kiểm duyệt nội dung** | Bộ lọc Validation Rules kiểm soát dữ liệu đầu vào |
+| **SQL Injection** | JPA/Hibernate parameterized queries |
+| **CORS** | Chỉ cho phép origin của frontend |
+| **Rate Limiting** | Giới hạn 60 requests/phút/IP trên API Gateway |
+
+### 9.2. Tuân thủ quy định dữ liệu y tế
+
+- Dữ liệu bệnh nhân tuân theo **Nghị định 13/2023/NĐ-CP** về bảo vệ dữ liệu cá nhân tại Việt Nam.
+- Ảnh thẻ BHYT sau khi OCR xong cần được xóa sau 24 giờ (có thể cấu hình).
+- Admin có thể export dữ liệu ở dạng ẩn danh (anonymized) cho mục đích báo cáo thống kê.
+
+---
+
+## 10. KẾ HOẠCH TRIỂN KHAI (Deployment Plan)
+
+### 10.1. Môi trường Development (Docker Compose)
+
+```yaml
+# docker-compose.yml (tóm tắt)
+services:
+  postgres:     # PostgreSQL database
+  redis:        # Redis cache + queue
+  minio:        # File storage
+  backend:      # Spring Boot app (port 8080)
+  nlp-service:  # FastAPI NLP (port 8001)
+  cv-service:   # FastAPI CV (port 8002)
+  # frontend removed, using Thymeleaf SSR in Spring Boot
+  nginx:        # Reverse proxy (port 80/443)
+```
+
+### 10.2. Cấu trúc thư mục dự án
+
+```
+medassist/
+├── HeThongPhanLuongBenhVien/  # Spring Boot + Thymeleaf
+│   ├── src/
+│   │   ├── pages/          # Các trang chính
+│   │   ├── components/     # Component dùng chung
+│   │   ├── hooks/          # Custom hooks (useWebSocket...)
+│   │   ├── store/          # Redux/Zustand store
+│   │   └── services/       # API calls
+├── backend/                # Spring Boot App
+│   ├── src/main/java/
+│   │   ├── auth/           # Module xác thực
+│   │   ├── chat/           # Module chat + WebSocket
+│   │   ├── queue/          # Module quản lý hàng đợi
+│   │   ├── admin/          # Module quản trị
+│   │   └── ai/             # AI Gateway
+│   └── src/main/resources/
+├── HeThongPhanLuongBenhVien/  # Spring Boot Backend (:8081)
+│   ├── pom.xml
+│   └── src/main/java/
+└── ollama/                    # Local AI Service (:11434, qwen2.5-coder:3b)
+```
+
+---
+
+## 11. THIẾT KẾ DỮ LIỆU MÔ PHỎNG BHYT (Mock Data Design)
+
+> [!NOTE]
+> Hệ thống sử dụng **dữ liệu BHYT giả** cho mục đích mô phỏng và kiểm thử. Admin (người phát triển) đóng vai trò nhà nước — tự sinh mã BHYT và cấp tài khoản cho người dùng test. Trên thực tế, dữ liệu BHYT sẽ được nhập từ cơ quan BHYT cấp.
+
+### 11.1. Cấu trúc Mã BHYT Mô phỏng
+
+Mã BHYT được thiết kế theo chuẩn gần giống thực tế để dễ nhận biết nhóm đối tượng:
+
+```
+[ MÃ ĐỐI TƯỢNG ] [ MỨC HƯỞNG ] [ MÃ TỈNH ] [ SỐ THỨ TỰ ]
+       HN               1             79         000000001
+       CN               3             79         000000001
+       DN               4             79         000000001
+                        │
+                        ├── 1 → Chi trả 100% (miễn phí hoàn toàn)
+                        ├── 3 → Chi trả 95%  (bệnh nhân trả 5%)
+                        └── 4 → Chi trả 80%  (bệnh nhân trả 20%)
+
+Mã tỉnh: 79 = TP. Hồ Chí Minh (theo chuẩn BHXH Việt Nam)
+```
+
+### 11.2. Phân loại 9 Nhóm Đối tượng BHYT
+
+| # | Mã | Nhóm đối tượng | Mức chi trả | Ví dụ Mã BHYT | Hạn thẻ | Ghi chú đặc biệt |
+|---|----|----|:---:|---|---|---|
+| 1 | `HN` | **Hộ nghèo** | **100%** | `HN17900000001` | Hàng năm | Bệnh nhân **không trả đồng nào** |
+| 2 | `CN` | **Cận nghèo** | **95%** | `CN37900000001` | Hàng năm | Chỉ trả 5% phần còn lại |
+| 3 | `NN` | Nông, lâm, ngư nghiệp | **80%** | `NN47900000001` | Hàng năm | |
+| 4 | `TE` | Trẻ em dưới 6 tuổi | **100%** | `TE17900000001` | Theo sinh nhật | Miễn phí đến 6 tuổi |
+| 5 | `HS` | Học sinh / Sinh viên | **80%** | `HS47900000001` | Theo năm học | |
+| 6 | `DN` | Người lao động (DN đóng) | **80%** | `DN47900000001` | Hàng năm | Nhóm phổ biến nhất |
+| 7 | `VC` | Người có công cách mạng | **100%** | `VC17900000001` | Vĩnh viễn | Không hết hạn |
+| 8 | `NQ` | Người cao tuổi ≥ 80 tuổi | **100%** | `NQ17900000001` | Vĩnh viễn | Không hết hạn |
+| 9 | `BT` | Hộ gia đình tự nguyện | **80%** | `BT47900000001` | Hàng năm | |
+
+### 11.3. Logic Tính Tiền Theo Mức Hưởng (Có xét Danh mục BHYT và Giá trần)
+
+*Giả định: Hệ thống luôn coi bệnh nhân khám Đúng tuyến (Lý tưởng nhất).*
+
+**Thuật toán quét từng dịch vụ và thuốc:**
+- Nếu `is_bhyt_covered = false` (Không thuộc danh mục BHYT chi trả):
+  $\rightarrow$ Bệnh nhân tự trả 100%. `patient_co_pay = price`, `bhyt_pay = 0`.
+- Nếu `is_bhyt_covered = true` (BHYT chi trả):
+  $\rightarrow$ Xác định giá cơ sở để tính BHYT: $Price_{base} = \min(price, bhyt\_price\_limit)$
+  $\rightarrow$ `bhyt_pay` = $Price_{base} \times bhyt\_discount\_rate$
+  $\rightarrow$ `patient_co_pay` = $price - bhyt\_pay$
+
+**Tổng kết hóa đơn (`VISIT_RECORDS`):**
+- `original_cost` = Tổng `price` của tất cả dịch vụ + thuốc.
+- `insurance_paid` = Tổng `bhyt_pay`.
+- `final_cost` = Tổng `patient_co_pay`.
+
+Ví dụ với một ca khám: Tiền khám 100k (BHYT trần 100k), Xét nghiệm ngoài danh mục 300k, Thuốc A 200k (BHYT trần 150k). Bệnh nhân hưởng mức 80% (Người LĐ):
+- Tiền khám: BH trả 100k × 80% = 80k. Bệnh nhân trả 20k.
+- Xét nghiệm (Ngoài DM): BH trả 0đ. Bệnh nhân trả 300k.
+- Thuốc A: Giá tính BH là min(200k, 150k) = 150k. BH trả 150k × 80% = 120k. Bệnh nhân trả: 200k - 120k = 80k.
+$\rightarrow$ **Tổng thanh toán:** Giá gốc = 600k. BH trả = 200k. Bệnh nhân trả = 400k.
+
+### 11.4. Trường hợp Test Đặc biệt
+
+| Loại test | Điều kiện | Kết quả hiển thị |
+|-----------|-----------|------------------|
+| **Hộ nghèo khám** | `bhyt_discount_rate = 1.00` | Badge "Miễn phí 100%" 🟢, `final_cost = 0đ` |
+| **Cận nghèo khám** | `bhyt_discount_rate = 0.95` | Số tiền rất nhỏ, hiển thị rõ BH trả |
+| **Thẻ hết hạn** | `bhyt_expiry_date < NOW()` | Cảnh báo đỏ 🔴, không áp dụng BH |
+| **Sắp hết hạn** | `bhyt_expiry_date - 90 ngày` | Cảnh báo vàng ⚠️ "Còn N ngày" |
+| **Thẻ vĩnh viễn** | `bhyt_expiry_date = 2099-12-31` | Không hiển thị hạn dùng |
+
+### 11.5. Danh sách Tài khoản Test (Phát cho người test)
+
+> [!IMPORTANT]
+> Mật khẩu mặc định tất cả tài khoản bệnh nhân: **`Test@123`**
+> Mật khẩu nhân viên: **`Admin@123`**
+> Lần đầu đăng nhập bệnh nhân sẽ được yêu cầu **đổi mật khẩu**.
+
+**Tài khoản Bệnh nhân test:**
+
+| Nhóm | Mã BHYT (dùng để đăng nhập) | Họ tên | BH% | Hạn BH |
+|---|---|---|:---:|---|
+| Hộ nghèo | `HN17900000001` | Nguyễn Văn Nghèo | 100% | 31/12/2027 |
+| Hộ nghèo | `HN17900000002` | Trần Thị Khổ | 100% | 30/06/2027 |
+| Cận nghèo | `CN37900000001` | Phạm Thị Cận | 95% | 31/12/2027 |
+| Cận nghèo | `CN37900000002` | Võ Văn Bần | 95% | 30/06/2026 |
+| Trẻ em <6t | `TE17900000001` | Trần Bé Nam | 100% | 30/06/2028 |
+| Học sinh/SV | `HS47900000001` | Nguyễn Học Sinh | 80% | 31/08/2025 |
+| Người LĐ | `DN47900000001` | Nguyễn Thị Lan | 80% | 31/12/2026 |
+| Người LĐ | `DN47900000002` | Trần Văn Bình | 80% | 30/06/2027 |
+| Người có công | `VC17900000001` | Nguyễn Cựu Chiến | 100% | Vĩnh viễn |
+| Cao tuổi ≥80 | `NQ17900000001` | Cụ Lê Văn Thọ | 100% | Vĩnh viễn |
+| Tự nguyện | `BT47900000001` | Nguyễn Tự Nguyện | 80% | 31/12/2027 |
+| ⚠️ Thẻ hết hạn | `DN47900099001` | Test Thẻ Hết Hạn | 80% | 01/01/2025 |
+| ⚠️ Sắp hết hạn | `CN37900099002` | Test Sắp Hết Hạn | 95% | 15/10/2026 |
+
+**Tài khoản Nhân viên:**
+
+| Role | Email đăng nhập | Mật khẩu |
+|---|---|---|
+| Super Admin | `admin@medassist.vn` | `Admin@123` |
+| Bác sĩ | `bs.minh@medassist.vn` | `Admin@123` |
+| Y tá / Lễ tân | `yta.nga@medassist.vn` | `Admin@123` |
+
+### 11.6. Trường bổ sung vào bảng USERS cho BHYT
+
+```sql
+-- Các cột cần thêm vào bảng USERS so với thiết kế ban đầu
+ALTER TABLE users ADD COLUMN bhyt_object_code   VARCHAR(2)   -- Mã đối tượng: HN, CN, DN, TE...
+ALTER TABLE users ADD COLUMN bhyt_object_name   VARCHAR(50)  -- Tên đối tượng: "Hộ nghèo", "Cận nghèo"...
+ALTER TABLE users ADD COLUMN bhyt_discount_rate DECIMAL(3,2) -- Mức hưởng: 1.00, 0.95, 0.80
+ALTER TABLE users ADD COLUMN bhyt_expiry_date   DATE         -- Hạn sử dụng thẻ
+ALTER TABLE users ADD COLUMN bhyt_issued_date   DATE         -- Ngày cấp thẻ
+ALTER TABLE users ADD COLUMN created_by         UUID         -- Admin đã tạo tài khoản này
+ALTER TABLE users ADD COLUMN department_id      UUID         -- Khoa trực thuộc (đối với Bác sĩ/Y tá)
+```
