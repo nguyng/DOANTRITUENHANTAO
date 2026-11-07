@@ -48,6 +48,8 @@ scratch/
 DBCheck.java
 DBCheck.class
 HashGen.java
+~$*
+*.bak
 
 # File ghi chú tạm
 *.txt

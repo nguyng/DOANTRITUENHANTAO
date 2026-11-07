@@ -32,21 +32,21 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 └───────────────────────────┼──────────────────────────────────────────┘
                             │ REST API
 ┌───────────────────────────▼──────────────────────────────────────────┐
-│                      AI SERVICE LAYER (Python)                        │
+│                      LOCAL AI & SERVICE LAYER                        │
 │  ┌──────────────────────────┐   ┌───────────────────────────────┐    │
-│  │   NLP Service (FastAPI)  │   │  CV Service (FastAPI)         │    │
-│  │  • Ollama qwen2.5-coder:3b (Phân luồng 2 giai đoạn) │   │  • BHYT Verification Engine      │    │
-│  │  • Trợ lý tiếp đón & FAQ         │   │  • Đối soát BHYT chính chủ khớp CCCD   │    │
-│  │  • Sentiment Analysis    │   │  • Image Moderation           │    │
+│  │   Local LLM via Ollama   │   │  BHYT & CCCD Matching Engine  │    │
+│  │  • Model: qwen2.5-coder  │   │  • Xác thực thẻ chuẩn 15 ký tự│    │
+│  │  • Phân luồng 2 giai đoạn│   │  • Đối soát BHYT chính chủ    │    │
+│  │  • Off-Topic Guard       │   │  • Mock BHXH API Service      │    │
 │  └──────────────────────────┘   └───────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────────┘
             │
 ┌───────────▼──────────────────────────────────────────────────────────┐
 │                       DATA LAYER (Tier 3)                             │
 │  ┌───────────────┐  ┌─────────────┐  ┌────────────┐  ┌──────────┐  │
-│  │  PostgreSQL   │  │    Redis    │  │  MinIO /   │  │Rabbit MQ │  │
-│  │  (Main DB)    │  │  (Cache &   │  │  AWS S3    │  │(Message  │  │
-│  │               │  │   Queue)    │  │  (Images)  │  │ Broker)  │  │
+│  │  PostgreSQL   │  │    Redis    │  │  Audit Log │  │ Rabbit MQ│  │
+│  │  (Main DB)    │  │  (Cache &   │  │  Storage   │  │ (Message │  │
+│  │               │  │   Queue)    │  │  (Logs)    │  │  Broker) │  │
 │  └───────────────┘  └─────────────┘  └────────────┘  └──────────┘  │
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -186,7 +186,7 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 
 **Bảng `CHAT_MESSAGES`**: Cột `sender_role` gồm 3 giá trị:
 - `USER`: Tin bệnh nhân gửi.
-- `BOT`: Phản hồi từ AI (PhoBERT / FAQ model).
+- `BOT`: Phản hồi từ AI (Local LLM Qwen2.5 / Prompt Engineering).
 - `SYSTEM`: Thông báo tự động của hệ thống (VD: "Phiếu khám số 12 của bạn đã được tạo!", "Đến lượt bạn rồi!").
 
 ---
@@ -249,13 +249,12 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 | `GET` | `/api/v1/departments` | Lấy danh sách các khoa phòng đang mở | Public |
 | `GET` | `/api/v1/departments/{id}/directions` | Lấy thông tin **Chỉ dẫn đường đi** (Tòa nhà, Tầng, Phòng, `location_guide`) | Public |
 
-#### 🤖 AI Gateway APIs (proxy đến AI Service)
+#### 🤖 AI Service & Triage APIs
 | Method | Endpoint | Mô tả | Auth |
 |--------|----------|-------|------|
-| `POST` | `/api/v1/ai/analyze-symptom` | Phân tích triệu chứng | Internal |
-| `POST` | `/api/v1/ai/faq` | Trả lời câu hỏi FAQ | Internal |
-| `POST` | `/api/v1/ai/extract-bhyt` | OCR trích xuất mã BHYT | Internal |
-| `POST` | `/api/v1/ai/detect-severity` | Phát hiện mức độ khẩn cấp | Internal |
+| `POST` | `/chat/send` | Gửi tin nhắn mô tả triệu chứng, phân luồng 2 giai đoạn | User |
+| `POST` | `/api/v1/bhyt/verify` | Xác thực & đối soát thẻ BHYT chuẩn 15 ký tự | User |
+| `GET`  | `/chat/session` | Lấy phiên trò chuyện hiện tại | User |
 
 ### 3.2. WebSocket Endpoints (STOMP Protocol)
 
@@ -271,39 +270,34 @@ Hệ thống được thiết kế theo mô hình **3-Tier Architecture** kết 
 
 ## 4. LUỒNG XỬ LÝ AI (AI Processing Flows)
 
-### 4.1. Luồng Phân tích Triệu chứng & Phân luồng Khoa (PhoBERT)
+### 4.1. Luồng Phân tích Triệu chứng & Phân luồng Khoa (Local LLM via Ollama)
 
 ```
 Bệnh nhân nhập mô tả triệu chứng
             │
             ▼
-┌───────────────────────┐
-│  WebSocket Handler    │
-│  (Spring Boot)        │
-│  Nhận tin nhắn văn bản│
-└──────────┬────────────┘
-           │ HTTP POST /analyze-symptom
-           ▼
 ┌───────────────────────────────────────────────────────┐
-│               NLP Service (FastAPI - Python)           │
+│              ChatService (Spring Boot)                │
 │                                                       │
-│  1. Tiền xử lý văn bản                               │
-│     ├─ Làm sạch: xóa emoji, ký tự đặc biệt          │
-│     ├─ Chuẩn hóa: viết tắt → từ đầy đủ              │
-│     └─ Word Segmentation: VnCoreNLP                  │
+│  1. Kiểm tra Cờ đỏ Nguy kịch (Red Flag Bypass)        │
+│     ├─ Từ khóa nguy kịch: bất tỉnh, nôn ra máu...     │
+│     └─ Có Red Flag? → Chuyển thẳng KCAPCUU (M1)       │
 │                                                       │
-│  2. Phân loại Intent                                 │
-│     ├─ Intent = FAQ?  → FAQ Handler (PhoBERT FAQ)    │
-│     └─ Intent = SYMPTOM? → Triage Model              │
+│  2. Kiểm tra Câu hỏi Ngoài Y tế (Off-Topic Guard)     │
+│     ├─ Từ khóa off-topic: bóng đá, thời tiết, crypto..│
+│     └─ Is Off-Topic? → Từ chối lịch sự, bypass LLM    │
 │                                                       │
-│  3. PhoBERT Triage Model                             │
-│     ├─ Input: tokenized text                         │
-│     ├─ Model: vinai/phobert-base fine-tuned          │
-│     ├─ Output: [dept_id, confidence_score, severity] │
-│     └─ Threshold: confidence < 0.7 → hỏi thêm       │
+│  3. Xác định Giai đoạn Hội thoại (Two-Phase Triage)   │
+│     ├─ Giai đoạn 1 (Lượt 1, ngắn): SYSTEM_PROMPT_PROBE│
+│     │   → Đặt 2-3 câu hỏi khai thác triệu chứng mấu chốt│
+│     └─ Giai đoạn 2 (Lượt 2+ / chi tiết): DECISION     │
+│         → Gửi request Ollama /api/chat (qwen2.5-coder)│
 │                                                       │
-│  4. Severity Detection (Multi-task)                  │
-│     └─ Output: EMERGENCY 🔴 / MEDIUM 🟡 / NORMAL 🟢 │
+│  4. Trả về kết quả JSON:                              │
+│     ├─ department_code: KTIM, KHOHAP, KTIEUHOA...     │
+│     ├─ priority: M1 / M2 / M3 / M4 / M5               │
+│     ├─ confidence: 85 - 98%                           │
+│     └─ summary, advice                                │
 └──────────────────────────┬────────────────────────────┘
                            │ JSON Response
                            ▼
@@ -463,7 +457,7 @@ QUẢN TRỊ VIÊN (ADMIN role)
   │             │───────►│  │  UC-04: Xem lịch sử khám bệnh (danh sách)  │  │
   │             │───────►│  │  UC-05: Xem chi tiết lần khám + đơn thuốc  │  │
   │             │───────►│  │  UC-06: Chat với Trợ lý ảo AI              │  │
-  │             │───────►│  │  UC-07: Gửi ảnh thẻ BHYT (OCR nhận diện)  │  │
+  │             │───────►│  │  UC-07: Xác thực thẻ BHYT chuẩn 15 ký tự   │  │
   │             │───────►│  │  UC-08: Nhận phân luồng Khoa từ AI         │  │
   │             │───────►│  │  UC-09: Bốc số / Xem phiếu khám            │  │
   │             │◄───────│  │  UC-10: Nhận thông báo đến lượt            │  │
@@ -588,19 +582,18 @@ Bệnh nhân    WebSocket     Spring Boot    NLP Service    Database    Redis Qu
 
 ## 8. CÁC MÔ HÌNH AI — Chi tiết Kỹ thuật
 
-### 8.1. Mô hình NLP — PhoBERT Fine-tuned
+### 8.1. Mô hình Phân luồng Cục bộ — Local LLM via Ollama (Qwen2.5-Coder:3B)
 
 | Thông số | Chi tiết |
 |---------|----------|
-| **Base Model** | `vinai/phobert-base` (HuggingFace) |
-| **Task 1** | Text Classification: Phân luồng Khoa (10–15 classes) |
-| **Task 2** | Sequence Classification: Phân loại Intent (FAQ / SYMPTOM / OTHER) |
-| **Task 3** | Sentiment Analysis: Phát hiện lo lắng/hoảng loạn |
-| **Framework** | PyTorch + HuggingFace Transformers |
-| **Input** | Chuỗi văn bản tiếng Việt đã segment (max 256 tokens) |
-| **Output** | `{class_label, confidence_score, top_3_predictions}` |
-| **Training** | Fine-tune 3–5 epochs trên dataset triệu chứng y tế tiếng Việt |
-| **Metrics** | Accuracy, F1-Score, Confusion Matrix |
+| **Base Model** | `qwen2.5-coder:3b` (chạy trên Ollama, port 11434) |
+| **Kiến trúc** | Two-Phase Clinical Triage (Quy trình lâm sàng 2 giai đoạn) |
+| **Giai đoạn 1 (Thăm dò)** | Prompt Probe: Đặt 2-3 câu hỏi then chốt khai thác triệu chứng mấu chốt |
+| **Giai đoạn 2 (Quyết định)**| Prompt Decision: Tổng hợp thông tin, chẩn đoán phân biệt, chốt 11 chuyên khoa |
+| **Bộ lọc An toàn** | Red Flag Bypass (< 50ms) & Off-Topic Guard (từ chối câu hỏi phi y tế) |
+| **Tham số suy luận** | `temperature: 0.1` (nhất quán), `num_predict: 350` (phản hồi < 1-2s) |
+| **Định dạng Output** | JSON Schema chuẩn hóa (`has_triage_result`, `triage`, `reply`) |
+| **Cơ chế dự phòng** | Rule-based Fallback Java tích hợp sẵn khi mô hình ngoại tuyến |
 
 ### 8.2. Quy chuẩn Xác thực Thẻ BHYT 15 ký tự & Đối soát CCCD
 
@@ -633,7 +626,7 @@ Bệnh nhân    WebSocket     Spring Boot    NLP Service    Database    Redis Qu
 ### 9.2. Tuân thủ quy định dữ liệu y tế
 
 - Dữ liệu bệnh nhân tuân theo **Nghị định 13/2023/NĐ-CP** về bảo vệ dữ liệu cá nhân tại Việt Nam.
-- Ảnh thẻ BHYT sau khi OCR xong cần được xóa sau 24 giờ (có thể cấu hình).
+- Dữ liệu xác thực thẻ BHYT và định danh CCCD được mã hóa và đối soát bảo mật theo quy định Bộ Y tế.
 - Admin có thể export dữ liệu ở dạng ẩn danh (anonymized) cho mục đích báo cáo thống kê.
 
 ---
@@ -645,14 +638,10 @@ Bệnh nhân    WebSocket     Spring Boot    NLP Service    Database    Redis Qu
 ```yaml
 # docker-compose.yml (tóm tắt)
 services:
-  postgres:     # PostgreSQL database
-  redis:        # Redis cache + queue
-  minio:        # File storage
-  backend:      # Spring Boot app (port 8080)
-  nlp-service:  # FastAPI NLP (port 8001)
-  cv-service:   # FastAPI CV (port 8002)
-  # frontend removed, using Thymeleaf SSR in Spring Boot
-  nginx:        # Reverse proxy (port 80/443)
+  postgres:     # PostgreSQL 18.6 database (port 5432)
+  redis:        # Redis cache + queue (port 6379)
+  backend:      # Spring Boot app (port 8081)
+  ollama:       # Local LLM service with qwen2.5-coder:3b (port 11434)
 ```
 
 ### 10.2. Cấu trúc thư mục dự án

@@ -19,16 +19,16 @@
 
 ---
 
-## 2. KẾT QUẢ KIỂM THỬ ĐƠN VỊ (UNIT TESTS) — 15/15 PASS (100%)
+## 2. KẾT QUẢ KIỂM THỬ ĐƠN VỊ (UNIT TESTS) — 50/50 PASS (100%)
 
-Toàn bộ 15 ca kiểm thử đơn vị được thực thi tự động qua Maven Surefire, kiểm soát chặt chẽ các tầng xử lý nghiệp vụ:
+Toàn bộ 50 ca kiểm thử đơn vị được thực thi tự động qua Maven Surefire, kiểm soát chặt chẽ các tầng xử lý nghiệp vụ:
 
 | Test Suite | Số ca | Kết quả | Nội dung kiểm thử chi tiết |
 |---|:---:|:---:|---|
+| **OffTopicGuardTest** *(Mới)* | 36 | **PASS ✅** | • Phát hiện chính xác câu hỏi ngoài y tế (bóng đá, thời tiết, điện thoại, nấu ăn, crypto, tin tức...)<br>• Hỗ trợ cả gõ có dấu lẫn không dấu (`bong da`, `thoi tiet`, `iphone`...)<br>• Không chặn nhầm câu hỏi y tế hợp lệ (đau ngực, sốt cao, ho đờm, chóng mặt...)<br>• Chặn câu hỏi ngoài y tế trước khi gọi Ollama API, tiết kiệm tài nguyên GPU/CPU<br>• Phản hồi từ chối lịch sự và hướng dẫn người bệnh quay lại mô tả triệu chứng<br>• Đảm bảo Red Flag cấp cứu luôn được ưu tiên cao nhất |
 | **BhytVerificationServiceTest** | 6 | **PASS ✅** | • Mã thẻ rỗng (báo lỗi `E00`)<br>• Độ dài không đúng 15 ký tự (`E01`)<br>• Mã đối tượng không hợp lệ (`E01`)<br>• Mã tỉnh không tồn tại (`E01`)<br>• Tra cứu thẻ hợp lệ từ Mock BHXH API (TE hưởng 100%)<br>• Tra cứu thẻ nội bộ từ CSDL bệnh viện (HN hưởng 100%) |
-| **UserCccdAndBhytMatchingTest** | 3 | **PASS ✅** | • Tra cứu người dùng bằng số CCCD 12 chữ số<br>• Cơ chế tra cứu đa định danh `findByAnyIdentifier`<br>• Tính toàn vẹn: BHYT nhập vào bắt buộc phải khớp với CCCD của tài khoản |
 | **TwoPhaseClinicalTriageTest** | 5 | **PASS ✅** | • Red Flag: Nhận diện từ khóa nguy kịch (bất tỉnh, nôn ra máu, ngừng thở)<br>• Đánh giá mô tả chi tiết `isVeryDetailed` (>120 ký tự + 2 markers)<br>• Chuẩn hóa mã chuyên khoa `normalizeDeptCode` đa biến thể<br>• Fallback Giai đoạn 1: Đặt câu hỏi khai thác chuyên sâu khi mô tả ngắn<br>• Fallback Giai đoạn 2: Phán đoán phân biệt chính xác vào Khoa Hô Hấp |
-| **HeThongPhanLuongBenhVienApplicationTests** | 1 | **PASS ✅** | • Nạp toàn diện Spring Boot Context kết nối trực tiếp PostgreSQL 18 |
+| **UserCccdAndBhytMatchingTest** | 3 | **PASS ✅** | • Tra cứu người dùng bằng số CCCD 12 chữ số<br>• Cơ chế tra cứu đa định danh `findByAnyIdentifier`<br>• Tính toàn vẹn: BHYT nhập vào bắt buộc phải khớp với CCCD của tài khoản |
 
 ---
 
@@ -65,11 +65,19 @@ Trong đợt nâng cấp và kiểm thử này, hệ thống đã hoàn thiện 
    - Thiết lập vai trò *"Trợ Lý Tiếp Đón & Phân Luồng Phòng Khám"*, tránh xưng "Bác sĩ chẩn đoán" để không kích hoạt bộ lọc Safety Refusal của `qwen2.5-coder:3b`.
    - Bổ sung tham số `num_predict: 350` và `temperature: 0.1` giúp phản hồi nhanh, cô đọng và định dạng JSON tuyệt đối chuẩn xác.
 
-4. **Nâng cấp Xử lý Chuỗi `normalizeDeptCode`:**  
-   - Tự động chuẩn hóa các biến thể mã khoa (ví dụ: `TIM_MACH` -> `KTIM`, `CO_XUONG_KHOP` -> `KXUONGKHOP`, `KHOA_HOHAP` -> `KHOHAP`), đảm bảo không bị sai lệch liên kết bảng chuyên khoa.
+4. **Bộ lọc Câu hỏi Ngoài Y tế (Off-Topic Guard) 3 Tầng Bảo vệ:**  
+   - **Tầng 1 (Bypass tại Java):** Chặn các câu hỏi phi y tế (thời tiết, thể thao, công nghệ, tiền tệ...) ngay trước khi gọi Ollama API, tiết kiệm tối đa tài nguyên suy luận của mô hình.
+   - **Tầng 2 (Fallback Guard):** Đảm bảo phản hồi dự phòng của Java từ chối lịch sự và hướng dẫn quay lại mô tả triệu chứng.
+   - **Tầng 3 (System Prompt Guard):** Chỉ thị rõ trong prompt cho `qwen2.5-coder:3b` từ chối các câu hỏi không thuộc lĩnh vực chăm sóc sức khỏe.
+
+5. **Xử lý Ranh giới Từ Unicode (`(?U)\bho\b` và `(?U)\btê\b`):**  
+   - Sử dụng Regex Unicode word boundary để loại trừ 100% hiện tượng bắt nhầm chuỗi con y tế ngắn trong các từ thông thường (ví dụ: `th[ho]i tiet`, `ip[ho]ne`, `[ho]m nay`, `p[ho]`).
+
+6. **Nâng cấp Cấu hình Build Đa nền tảng:**  
+   - Bổ sung `project.build.sourceEncoding` và `project.reporting.outputEncoding` chuẩn UTF-8 trong `pom.xml`, đảm bảo biên dịch đồng nhất giữa Windows và Linux.
 
 ---
 
 ## 5. KẾT LUẬN
 
-Hệ thống **MedAssist AI** đã vượt qua toàn diện cả **15 ca Unit Tests** và **9 ca Integration Tests**, chứng minh tính ổn định, độ an toàn y tế và tính năng bảo mật định danh người bệnh sẵn sàng cho việc nghiệm thu và vận hành thực tế.
+Hệ thống **MedAssist AI** đã vượt qua toàn diện cả **50 ca Unit Tests** và **9 ca Integration Tests** (100% PASS), chứng minh tính ổn định, độ an toàn y tế và tính năng bảo mật định danh người bệnh sẵn sàng cho việc nghiệm thu và vận hành thực tế.

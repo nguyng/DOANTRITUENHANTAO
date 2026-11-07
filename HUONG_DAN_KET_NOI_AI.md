@@ -31,18 +31,23 @@ Trình duyệt Web ──(AJAX /chat/send)──► Spring Boot 4.1.1 (:8081) �
 Nhằm khắc phục tình trạng phán đoán vội vàng khi các bệnh lý có triệu chứng ban đầu tương đồng (ví dụ: đau ngực do Tim mạch vs Viêm phổi màng phổi), hệ thống triển khai quy trình 2 giai đoạn:
 
 ```
-[Bệnh nhân nhập triệu chứng ban đầu]
+[Bệnh nhân nhập tin nhắn ban đầu]
               │
               ▼
-   Kiểm tra Red Flag Cấp cứu?
-     ├── CÓ ──► BYPASS TOÀN BỘ AI ──► Định tuyến ngay vào KHOA CẤP CỨU (Mức M1)
+   1. Kiểm tra Red Flag Cấp cứu?
+     ├── CÓ ──► BYPASS TOÀN BỘ AI ──► Định tuyến ngay KHOA CẤP CỨU (Mức M1)
      └── KHÔNG
            │
            ▼
-   Xác định Giai đoạn Hội thoại
+   2. Kiểm tra Câu hỏi ngoài Y tế (Off-Topic Guard)?
+     ├── CÓ ──► BYPASS TOÀN BỘ AI ──► Từ chối lịch sự & hướng dẫn mô tả triệu chứng
+     └── KHÔNG
+           │
+           ▼
+   3. Xác định Giai đoạn Hội thoại (Two-Phase Triage)
      ├── Lượt 1 (Mô tả ngắn, chưa đủ dữ kiện)
      │     └──► GIAI ĐOẠN 1: Khai thác Triệu chứng Mấu chốt (Probe Prompt)
-     │           └── AI đặt câu hỏi làm rõ tính chất, thời gian, triệu chứng đi kèm
+     │           └── AI đặt 2-3 câu hỏi làm rõ tính chất, thời gian, triệu chứng đi kèm
      │
      └── Lượt 2 trở đi (Đã có thông tin mấu chốt / Mô tả chi tiết > 120 ký tự)
            └──► GIAI ĐOẠN 2: Chẩn đoán Phân biệt & Chốt Khoa (Decision Prompt)
@@ -109,6 +114,19 @@ Khi người bệnh đã trả lời câu hỏi làm rõ:
   }
 }
 ```
+
+### 3.4. Cấu trúc Response khi Người dùng Hỏi Ngoài Y tế (Off-Topic Rejection)
+
+Khi người bệnh hỏi về các chủ đề phi y tế (bóng đá, thời tiết, điện thoại, crypto, ẩm thực, chính trị...):
+- **Cơ chế xử lý:** Bị phát hiện và chặn ngay tại tầng Java (`isOffTopic()` check) **trước khi gọi Ollama**, trả về ngay:
+```json
+{
+  "reply": "Xin lỗi, tôi chỉ có thể hỗ trợ các vấn đề liên quan đến sức khỏe và y tế. Tôi không thể tư vấn về chủ đề bạn vừa hỏi. Bạn có đang gặp bất kỳ triệu chứng sức khỏe nào cần được hỗ trợ không?",
+  "has_triage_result": false,
+  "triage": null
+}
+```
+*Kết quả:* Không tiêu tốn token/tài nguyên GPU của LLM, không phân luồng nhầm, hướng dẫn người bệnh quay lại mô tả triệu chứng.
 
 ---
 

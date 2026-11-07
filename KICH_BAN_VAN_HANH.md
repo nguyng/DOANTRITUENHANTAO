@@ -252,6 +252,20 @@ Hệ thống tự động:
 
 ---
 
+### 🛡️ TÌNH HUỐNG NGOẠI LỆ — Bệnh nhân hỏi câu hỏi ngoài y tế (Off-Topic Guard)
+
+Nếu bệnh nhân gõ vào khung chat các nội dung phi y tế, chẳng hạn:
+> *"Hôm nay thời tiết thế nào?"* hoặc *"Bóng đá hôm nay ai thắng?"*
+
+**Cơ chế xử lý tự động của hệ thống:**
+1. **Kiểm tra tức thì (< 5ms):** Hàm `isOffTopic()` tại `ChatService.java` phát hiện từ khóa chủ đề ngoài y tế (thời tiết, thể thao, điện thoại, ẩm thực, crypto...).
+2. **Bypass mô hình AI:** Hệ thống **không gửi request** đến Ollama `qwen2.5-coder:3b`, tiết kiệm 100% tài nguyên CPU/GPU.
+3. **Phản hồi từ chối lịch sự:**
+   > *"Xin lỗi, tôi chỉ có thể hỗ trợ các vấn đề liên quan đến sức khỏe và y tế. Tôi không thể tư vấn về chủ đề bạn vừa hỏi. Bạn có đang gặp bất kỳ triệu chứng sức khỏe nào cần được hỗ trợ không?"*
+4. **Không tạo phiếu khám sai lệch:** `has_triage_result = false`, giao diện không sinh thẻ tiếp đón, bảo vệ tính nghiêm túc của hệ thống hàng đợi bệnh viện.
+
+---
+
 ## 📊 TỔNG KẾT LUỒNG VẬN HÀNH
 
 ```
