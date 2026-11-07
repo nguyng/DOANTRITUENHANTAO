@@ -411,25 +411,31 @@ public class ChatService {
      * Tra ve true neu phat hien cac tu khoa dac trung cua chu de khong lien quan den suc khoe.
      */
     private boolean isOffTopic(String lower) {
-        // Cac tu khoa dac trung chu de ngoai y te
-        boolean hasOffTopicKeyword = lower.contains("bóng đá") || lower.contains("thời tiết") || lower.contains("world cup")
-                || lower.contains("nấu ăn") || lower.contains("công nghệ") || lower.contains("điện thoại")
-                || lower.contains("phim") || lower.contains("âm nhạc") || lower.contains("ca sĩ")
-                || lower.contains("diễn viên") || lower.contains("chính trị") || lower.contains("kinh tế")
-                || lower.contains("chứng khoán") || lower.contains("tiền tệ") || lower.contains("cryptocurrency")
-                || lower.contains("bitcoin") || lower.contains("game") || lower.contains("tin tức")
-                || lower.contains("thể thao") || lower.contains("bóng rổ") || lower.contains("cầu lông")
-                || lower.contains("du lịch") || lower.contains("khách sạn") || lower.contains("vé máy bay");
+        // Cac tu khoa dac trung chu de ngoai y te (ho tro ca co dau va khong dau)
+        boolean hasOffTopicKeyword =
+                lower.contains("bóng đá") || lower.contains("bong da") || lower.contains("world cup") || lower.contains("giải bóng")
+                || lower.contains("nấu ăn") || lower.contains("nau an") || lower.contains("công nghệ") || lower.contains("cong nghe")
+                || lower.contains("điện thoại") || lower.contains("dien thoai") || lower.contains("iphone") || lower.contains("android") || lower.contains("laptop")
+                || lower.contains("phim") || lower.contains("âm nhạc") || lower.contains("am nhac")
+                || lower.contains("ca sĩ") || lower.contains("ca si") || lower.contains("diễn viên") || lower.contains("dien vien")
+                || lower.contains("chính trị") || lower.contains("chinh tri") || lower.contains("kinh tế") || lower.contains("kinh te")
+                || lower.contains("chứng khoán") || lower.contains("chung khoan") || lower.contains("tiền tệ") || lower.contains("tien te")
+                || lower.contains("cryptocurrency") || lower.contains("crypto") || lower.contains("bitcoin") || lower.contains("game")
+                || lower.contains("thời tiết") || lower.contains("thoi tiet") || lower.contains("tin tức") || lower.contains("tin tuc")
+                || lower.contains("thể thao") || lower.contains("the thao") || lower.contains("bóng rổ") || lower.contains("bong ro")
+                || lower.contains("cầu lông") || lower.contains("cau long") || lower.contains("du lịch") || lower.contains("du lich")
+                || lower.contains("khách sạn") || lower.contains("khach san") || lower.contains("vé máy bay") || lower.contains("ve may bay");
 
-        // Khong co tu khoa y te nao
-        boolean hasNoMedicalKeyword = !lower.contains("đau") && !lower.contains("sốt") && !lower.contains("ho")
-                && !lower.contains("khó thở") && !lower.contains("buồn nôn") && !lower.contains("chóng mặt")
-                && !lower.contains("triệu chứng") && !lower.contains("bệnh") && !lower.contains("khám")
-                && !lower.contains("thuốc") && !lower.contains("bác sĩ") && !lower.contains("đau")
-                && !lower.contains("ngứa") && !lower.contains("mệt") && !lower.contains("nhức")
-                && !lower.contains("tê") && !lower.contains("sưng") && !lower.contains("chảy máu");
+        // Kiem tra tu khoa y te (chu y "ho" va "te" phai la tu dung doc lap de tranh trung hom, thoi, pho, iphone...)
+        boolean hasMedicalKeyword = lower.contains("đau") || lower.contains("sốt") || lower.contains("khó thở")
+                || lower.contains("buồn nôn") || lower.contains("chóng mặt") || lower.contains("triệu chứng")
+                || lower.contains("bệnh") || lower.contains("khám") || lower.contains("thuốc")
+                || lower.contains("bác sĩ") || lower.contains("ngứa") || lower.contains("mệt")
+                || lower.contains("nhức") || lower.contains("sưng") || lower.contains("chảy máu")
+                || lower.matches(".*(?U)\\bho\\b.*")
+                || lower.matches(".*(?U)\\btê\\b.*");
 
-        return hasOffTopicKeyword && hasNoMedicalKeyword;
+        return hasOffTopicKeyword && !hasMedicalKeyword;
     }
 
     private AiResponse fallbackResponse(String userText, List<Map<String, String>> history) {
