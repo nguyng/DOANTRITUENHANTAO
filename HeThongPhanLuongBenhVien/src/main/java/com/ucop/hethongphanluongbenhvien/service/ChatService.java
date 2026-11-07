@@ -224,6 +224,13 @@ public class ChatService {
                - Triệu chứng đi kèm (sốt, ho có đờm, khó thở, vã mồ hôi, ợ chua, buồn nôn, tê bì tay chân)?
                - Thời gian kéo dài bao lâu (mới xuất hiện vài giờ, vài ngày hay đã lâu)?
 
+            QUY TẮC XỬ LÝ CÂU HỎI NGOÀI Y TẾ (BẮT BUỘC):
+            Nếu người dùng hỏi về chủ đề KHÔNG liên quan đến sức khỏe, triệu chứng hoặc y tế (ví dụ: thời tiết, bóng đá, nấu ăn, công nghệ, chính trị, v.v.), bạn PHẢI:
+            - Lịch sự từ chối trả lời chủ đề đó trong trường reply.
+            - Nhắc nhở rằng bạn chỉ hỗ trợ tư vấn y tế và phân luồng khám bệnh.
+            - Khuyến khích bệnh nhân chia sẻ triệu chứng sức khỏe đang gặp phải.
+            - Giữ nguyên has_triage_result = false, triage = null.
+
             CHỈ TRẢ VỀ DUY NHẤT ĐỐI TƯỢNG JSON:
             {
               "reply": "câu hỏi khai thác triệu chứng mấu chốt ân cần, súc tích",
@@ -259,7 +266,14 @@ public class ChatService {
             - M4: Thông thường (triệu chứng nhẹ, bệnh mạn tính)
             - M5: Không khẩn (khám định kỳ)
 
-            YÊU CẦU ĐẦU RA:
+            QUY TẮC XỬ LÝ CÂU HỎI NGOÀI Y TẾ (BẮT BUỘC):
+            Nếu người dùng hỏi về chủ đề KHÔNG liên quan đến sức khỏe, triệu chứng hoặc y tế (ví dụ: thời tiết, bóng đá, nấu ăn, công nghệ, chính trị, v.v.), bạn PHẢI:
+            - Lịch sự từ chối trả lời chủ đề đó trong trường reply.
+            - Nhắc nhở rằng bạn chỉ hỗ trợ tư vấn y tế và phân luồng khám bệnh.
+            - Khuyến khích bệnh nhân chia sẻ triệu chứng sức khỏe đang gặp phải.
+            - Trả về has_triage_result = false, triage = null trong trường hợp này.
+
+            YÊU CẦU ĐẦU RA (chỉ áp dụng khi câu hỏi LIÊN QUAN đến y tế):
             1. has_triage_result = true
             2. Điền đầy đủ triage:
                - department_code: mã khoa phù hợp nhất trong 11 mã trên
@@ -290,7 +304,16 @@ public class ChatService {
                 return emergencyResponse(userText);
             }
 
-            // 2. Xac dinh giai doan hoi thoai:
+            // 2. Kiem tra cau hoi ngoai chu de y te -> tra ve tu choi lich su, khong goi Ollama
+            if (isOffTopic(userText.toLowerCase())) {
+                return new AiResponse(
+                        "Xin lỗi, tôi chỉ có thể hỗ trợ các vấn đề liên quan đến sức khỏe và y tế. " +
+                        "Tôi không thể tư vấn về chủ đề bạn vừa hỏi. " +
+                        "Bạn có đang gặp bất kỳ triệu chứng sức khỏe nào cần được hỗ trợ không?",
+                        false, null);
+            }
+
+            // 3. Xac dinh giai doan hoi thoai:
             // - Neu history.size() < 2 (moi la luot dau tien) va mo ta chua qua day du -> Giai doan 1 (Khai thac trieu chung mau chot)
             // - Neu history.size() >= 2 (benh nhan da tra loi cau hoi lam ro) hoac da mo ta rat chi tiet (> 120 ky tu) -> Giai doan 2 (Tong hop va chot khoa)
             boolean isInitialBrief = history.size() < 2 && !isVeryDetailed(userText);
@@ -383,12 +406,43 @@ public class ChatService {
         return new AiResponse("CẢNH BÁO: Tình trạng của bạn có dấu hiệu nguy kịch cần được bác sĩ xử trí ngay lập tức! Vui lòng vào thẳng Khoa Cấp Cứu hoặc nhờ người nhà hỗ trợ gấp.", true, triage);
     }
 
+    /**
+     * Kiem tra xem cau nhap co phai chu de ngoai y te khong.
+     * Tra ve true neu phat hien cac tu khoa dac trung cua chu de khong lien quan den suc khoe.
+     */
+    private boolean isOffTopic(String lower) {
+        // Cac tu khoa dac trung chu de ngoai y te
+        boolean hasOffTopicKeyword = lower.contains("bóng đá") || lower.contains("thời tiết") || lower.contains("world cup")
+                || lower.contains("nấu ăn") || lower.contains("công nghệ") || lower.contains("điện thoại")
+                || lower.contains("phim") || lower.contains("âm nhạc") || lower.contains("ca sĩ")
+                || lower.contains("diễn viên") || lower.contains("chính trị") || lower.contains("kinh tế")
+                || lower.contains("chứng khoán") || lower.contains("tiền tệ") || lower.contains("cryptocurrency")
+                || lower.contains("bitcoin") || lower.contains("game") || lower.contains("tin tức")
+                || lower.contains("thể thao") || lower.contains("bóng rổ") || lower.contains("cầu lông")
+                || lower.contains("du lịch") || lower.contains("khách sạn") || lower.contains("vé máy bay");
+
+        // Khong co tu khoa y te nao
+        boolean hasNoMedicalKeyword = !lower.contains("đau") && !lower.contains("sốt") && !lower.contains("ho")
+                && !lower.contains("khó thở") && !lower.contains("buồn nôn") && !lower.contains("chóng mặt")
+                && !lower.contains("triệu chứng") && !lower.contains("bệnh") && !lower.contains("khám")
+                && !lower.contains("thuốc") && !lower.contains("bác sĩ") && !lower.contains("đau")
+                && !lower.contains("ngứa") && !lower.contains("mệt") && !lower.contains("nhức")
+                && !lower.contains("tê") && !lower.contains("sưng") && !lower.contains("chảy máu");
+
+        return hasOffTopicKeyword && hasNoMedicalKeyword;
+    }
+
     private AiResponse fallbackResponse(String userText, List<Map<String, String>> history) {
         String lower = userText.toLowerCase();
 
         // Neu moi la cau chao hoi
         if (history.isEmpty() && (lower.contains("chào") || lower.contains("hello") || lower.length() < 15)) {
             return new AiResponse("Xin chào bạn! Tôi là Trợ lý Y tế AI tiếp đón của Bệnh viện MedAssist. Bạn đang gặp những triệu chứng khó chịu nào? Hãy mô tả cụ thể để tôi hỗ trợ nhé.", false, null);
+        }
+
+        // Phat hien cau hoi ngoai chu de y te -> tu choi lich su
+        if (isOffTopic(lower)) {
+            return new AiResponse("Xin lỗi, tôi chỉ có thể hỗ trợ các vấn đề liên quan đến sức khỏe và y tế. Tôi không thể tư vấn về chủ đề bạn vừa hỏi. Bạn có đang gặp bất kỳ triệu chứng sức khỏe nào cần được hỗ trợ không?", false, null);
         }
 
         // Neu la luot dau va chua du thong tin -> dat cau hoi khai thac them
