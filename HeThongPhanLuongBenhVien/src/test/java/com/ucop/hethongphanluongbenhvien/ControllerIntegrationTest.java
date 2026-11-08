@@ -140,11 +140,16 @@ public class ControllerIntegrationTest {
     @DisplayName("Kiểm tra Admin Departments /admin/departments")
 
     void testAdminDepartments() throws Exception {
-
         mockMvc.perform(get("/admin/departments"))
-
                 .andExpect(status().isOk());
+    }
 
+    @Test
+    @WithMockUser(username = "ADMIN_001", roles = {"ADMIN"})
+    @DisplayName("Kiểm tra Admin Reports /admin/reports")
+    void testAdminReports() throws Exception {
+        mockMvc.perform(get("/admin/reports"))
+                .andExpect(status().isOk());
     }
 
 
