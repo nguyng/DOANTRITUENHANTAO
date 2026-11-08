@@ -123,6 +123,7 @@
             <p class="text-sm text-slate-500 mb-4">Chuyển bệnh nhân <strong id="transferPatientName"></strong> sang khoa khác</p>
             <form th:action="@{/nurse/queue/transfer}" method="post" class="space-y-4">
                 <input type="hidden" name="ticketId" id="transferTicketId">
+                <input type="hidden" name="deptId" th:value="${department.id}">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Chọn khoa mới</label>
                     <select name="newDepartmentId" required
@@ -130,6 +131,11 @@
                         <option value="">-- Chọn khoa --</option>
                         <option th:each="d : ${allDepartments}" th:value="${d.id}" th:text="${d.name}">Khoa Tim Mạch</option>
                     </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Lý do chuyển khoa</label>
+                    <textarea name="reason" rows="2" placeholder="VD: Triệu chứng phù hợp khoa Tim Mạch hơn..."
+                              class="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:border-primary outline-none text-sm"></textarea>
                 </div>
                 <div class="flex gap-3">
                     <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl text-sm">
