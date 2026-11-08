@@ -23,7 +23,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tổng lượt AI phân tích</p>
-                        <p class="text-2xl font-black text-slate-800 mt-1" th:text="">0</p>
+                        <p class="text-2xl font-black text-slate-800 mt-1" th:text="${logs != null ? #lists.size(logs) : 0}">0</p>
                     </div>
                     <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
                         <i data-lucide="cpu" class="w-6 h-6"></i>
@@ -48,7 +48,7 @@
                     <div>
                         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Can thiệp chuyển khoa</p>
                         <p class="text-2xl font-black text-orange-500 mt-1"
-                           th:text="">0</p>
+                           th:text="${logs != null ? logs.?[isCorrected == true].size() : 0}">0</p>
                     </div>
                     <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
                         <i data-lucide="git-compare" class="w-6 h-6"></i>
@@ -81,42 +81,42 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        <tr th:if="">
+                        <tr th:if="${logs == null or #lists.isEmpty(logs)}">
                             <td colspan="6" class="px-6 py-12 text-center text-slate-400">
                                 <i data-lucide="activity" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
                                 Chưa có nhật ký phân tích AI nào được ghi nhận.
                             </td>
                         </tr>
-                        <tr th:each="l : " class="hover:bg-slate-50/80 transition-colors log-row">
+                        <tr th:each="l : ${logs}" class="hover:bg-slate-50/80 transition-colors log-row">
                             <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500"
-                                th:text=" ?  : '—'">
+                                th:text="${l.createdAt != null ? #temporals.format(l.createdAt, 'HH:mm:ss dd/MM/yyyy') : '—'}">
                                 14:30:00 20/09/2026
                             </td>
                             <td class="px-6 py-4 max-w-xs">
                                 <p class="text-sm font-medium text-slate-800 truncate log-input"
-                                   th:title="" th:text=" ?: '—'">Tôi bị đau tức ngực...</p>
-                                <span class="text-[11px] text-slate-400 font-mono" th:text=" ?: 'Hybrid-Triage-v2'">Hybrid-Triage-v2</span>
+                                   th:title="${l.inputText}" th:text="${l.inputText ?: '—'}">Tôi bị đau tức ngực...</p>
+                                <span class="text-[11px] text-slate-400 font-mono" th:text="${l.aiModelUsed ?: 'Local-Qwen-Triage'}">Local-Qwen-Triage</span>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="font-semibold text-slate-800 log-dept" th:text=" ?: 'Chưa xác định'">Khoa Tim Mạch</span>
+                                <span class="font-semibold text-slate-800 log-dept" th:text="${l.predictedDept ?: 'Chưa xác định'}">Khoa Tim Mạch</span>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <span th:if=""
+                                <span th:if="${l.confidenceScore != null}"
                                       class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold"
-                                      th:classappend=" ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
-                                      th:text="">92%</span>
-                                <span th:unless="" class="text-slate-400 text-xs">—</span>
+                                      th:classappend="${l.confidenceScore >= 0.85} ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                      th:text="${#numbers.formatPercent(l.confidenceScore, 1, 0)}">92%</span>
+                                <span th:unless="${l.confidenceScore != null}" class="text-slate-400 text-xs">—</span>
                             </td>
                             <td class="px-6 py-4 text-center font-mono text-xs text-slate-600"
-                                th:text="">
+                                th:text="${l.processingMs != null ? l.processingMs + ' ms' : '—'}">
                                 45 ms
                             </td>
                             <td class="px-6 py-4 text-center whitespace-nowrap">
-                                <span th:if="" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-50 text-orange-700"
-                                      th:title="'Y tá đã chuyển sang: ' + ">
+                                <span th:if="${l.isCorrected == true}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-50 text-orange-700"
+                                      th:title="'Y tá đã chuyển sang: ' + ${l.correctedDept ?: ''}">
                                     <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Điều chỉnh
                                 </span>
-                                <span th:unless="" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                                <span th:unless="${l.isCorrected == true}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
                                     <i data-lucide="check" class="w-3.5 h-3.5"></i> Chuẩn xác
                                 </span>
                             </td>
@@ -138,7 +138,11 @@
                 const rows = document.querySelectorAll('.log-row');
                 rows.forEach(row => {
                     const text = row.textContent.toLowerCase();
-                    row.style.display = text.includes(query) ? '' : 'none';
+                    if (text.includes(query)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
                 });
             });
         }

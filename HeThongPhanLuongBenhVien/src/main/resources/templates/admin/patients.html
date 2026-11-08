@@ -24,7 +24,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tổng bệnh nhân</p>
-                        <p class="text-2xl font-black text-slate-800 mt-1" th:text="">0</p>
+                        <p class="text-2xl font-black text-slate-800 mt-1" th:text="${patientList != null ? #lists.size(patientList) : 0}">0</p>
                     </div>
                     <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
                         <i data-lucide="users" class="w-6 h-6"></i>
@@ -37,7 +37,7 @@
                     <div>
                         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Có thẻ BHYT</p>
                         <p class="text-2xl font-black text-emerald-600 mt-1"
-                           th:text="">0</p>
+                           th:text="${patientList != null ? patientList.?[bhytNumber != null].size() : 0}">0</p>
                     </div>
                     <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
                         <i data-lucide="shield" class="w-6 h-6"></i>
@@ -50,7 +50,7 @@
                     <div>
                         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Đang hoạt động</p>
                         <p class="text-2xl font-black text-blue-600 mt-1"
-                           th:text="">0</p>
+                           th:text="${patientList != null ? patientList.?[isActive == true].size() : 0}">0</p>
                     </div>
                     <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
                         <i data-lucide="user-check" class="w-6 h-6"></i>
@@ -83,57 +83,57 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        <tr th:if="">
+                        <tr th:if="${patientList == null or #lists.isEmpty(patientList)}">
                             <td colspan="6" class="px-6 py-12 text-center text-slate-400">
                                 <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
                                 Chưa có hồ sơ bệnh nhân nào trong hệ thống
                             </td>
                         </tr>
-                        <tr th:each="p : " class="hover:bg-slate-50/80 transition-colors patient-row">
+                        <tr th:each="p : ${patientList}" class="hover:bg-slate-50/80 transition-colors patient-row">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="w-9 h-9 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center text-primary font-bold text-xs"
-                                         th:text="">N</div>
+                                         th:text="${p.fullName != null ? #strings.substring(p.fullName, 0, 1) : 'B'}">N</div>
                                     <div>
-                                        <p class="font-semibold text-slate-800 patient-name" th:text="">Nguyễn Văn A</p>
+                                        <p class="font-semibold text-slate-800 patient-name" th:text="${p.fullName}">Nguyễn Văn A</p>
                                         <p class="text-xs text-slate-400">
-                                            <span th:if="" th:text="">01/01/1990</span>
-                                            <span th:if=""> · </span>
-                                            <span th:if="" th:text="">Nam</span>
+                                            <span th:if="${p.dob != null}" th:text="${#temporals.format(p.dob, 'dd/MM/yyyy')}">01/01/1990</span>
+                                            <span th:if="${p.dob != null and p.gender != null}"> · </span>
+                                            <span th:if="${p.gender != null}" th:text="${p.gender}">Nam</span>
                                         </p>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 font-mono text-slate-600 patient-phone" th:text=" ?: '—'">0901234567</td>
+                            <td class="px-6 py-4 font-mono text-slate-600 patient-phone" th:text="${p.phone ?: '—'}">0901234567</td>
                             <td class="px-6 py-4">
-                                <div th:if="">
-                                    <span class="font-mono font-semibold text-slate-800 patient-bhyt" th:text="">DN47900000001</span>
-                                    <p class="text-xs text-slate-400" th:text=" ?: 'BHYT Doanh nghiệp'"></p>
+                                <div th:if="${p.bhytNumber != null}">
+                                    <span class="font-mono font-semibold text-slate-800 patient-bhyt" th:text="${p.bhytNumber}">DN47900000001</span>
+                                    <p class="text-xs text-slate-400" th:text="${p.bhytObjectName ?: 'BHYT'}"></p>
                                 </div>
-                                <span th:unless="" class="text-slate-400 text-xs italic">Không có thẻ</span>
+                                <span th:unless="${p.bhytNumber != null}" class="text-slate-400 text-xs italic">Không có thẻ</span>
                             </td>
                             <td class="px-6 py-4">
-                                <span th:if=""
+                                <span th:if="${p.bhytDiscountRate != null}"
                                       class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
-                                      th:classappend=" ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'"
-                                      th:text="">80%</span>
-                                <span th:unless="" class="text-slate-400 text-xs">—</span>
+                                      th:classappend="${p.bhytDiscountRate >= 0.95} ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'"
+                                      th:text="${#numbers.formatPercent(p.bhytDiscountRate, 1, 0)}">80%</span>
+                                <span th:unless="${p.bhytDiscountRate != null}" class="text-slate-400 text-xs">—</span>
                             </td>
                             <td class="px-6 py-4">
-                                <div th:if="">
+                                <div th:if="${p.bhytExpiryDate != null}">
                                     <p class="text-xs font-medium"
-                                       th:classappend=" ? 'text-red-500 font-bold' : 'text-slate-600'"
-                                       th:text="">31/12/2026</p>
-                                    <span th:if=""
+                                       th:classappend="${p.bhytExpiryDate.isBefore(T(java.time.LocalDate).now())} ? 'text-red-500 font-bold' : 'text-slate-600'"
+                                       th:text="${#temporals.format(p.bhytExpiryDate, 'dd/MM/yyyy')}">31/12/2026</p>
+                                    <span th:if="${p.bhytExpiryDate.isBefore(T(java.time.LocalDate).now())}"
                                           class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">Hết hạn</span>
                                 </div>
-                                <span th:unless="" class="text-slate-400 text-xs">—</span>
+                                <span th:unless="${p.bhytExpiryDate != null}" class="text-slate-400 text-xs">—</span>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <span th:if="" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                                <span th:if="${p.isActive == true}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
                                     <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Hoạt động
                                 </span>
-                                <span th:unless="" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                                <span th:unless="${p.isActive == true}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
                                     <span class="w-1.5 h-1.5 bg-slate-400 rounded-full"></span> Khóa
                                 </span>
                             </td>
