@@ -268,77 +268,77 @@ INSERT INTO DEPARTMENTS (id, name, code, description, building, floor, room_numb
 
 -- ------------------------------------------------------------------------------
 -- 2. Insert Tài khoản Cán bộ Quản trị, Bác sĩ & Y tá
---    • Mật khẩu ADMIN_001 : Admin@123 -> $2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay
---    • Mật khẩu Y tá/Bác sĩ: 123456    -> $2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.
+--    • Mật khẩu ADMIN_001 : Admin@123 -> $2a$10$xVXFF2NiTowRX52LNFt/SuI0xwTgJJ3asvlXWkpbo87YSfdQubemq
+--    • Mật khẩu Y tá/Bác sĩ: 123456    -> $2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG
 -- ------------------------------------------------------------------------------
 
 -- Quản trị viên hệ thống
 INSERT INTO USERS (id, bhyt_number, password_hash, full_name, role, department_id, email, phone) VALUES
-('a0000000-0000-0000-0000-000000000001', 'ADMIN_001', '$2a$10$wT3WqNl09QG3aWnO.i4DGuHlU./HlPXZjZ.G7zT66YV1T8jL80Oay', 'Super Admin', 'ADMIN', NULL, 'admin@medassist.vn', '0901234567');
+('a0000000-0000-0000-0000-000000000001', 'ADMIN_001', '$2a$10$xVXFF2NiTowRX52LNFt/SuI0xwTgJJ3asvlXWkpbo87YSfdQubemq', 'Super Admin', 'ADMIN', NULL, 'admin@medassist.vn', '0901234567');
 
 -- Y tá trực hàng đợi tại các khoa (Đăng nhập bằng mã: YTA_NGA, YTA_HOHAP, v.v. / Pass: 123456)
 INSERT INTO USERS (id, bhyt_number, password_hash, full_name, role, department_id, email, phone) VALUES
-('b0000000-0000-0000-0000-000000000001', 'YTA_NGA',       '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Lê Thu Nga',       'NURSE', 'd1111111-1111-1111-1111-111111111111', 'yta.nga@medassist.vn', '0922222222'),
-('b0000000-0000-0000-0000-000000000002', 'YTA_SAN',       '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Nguyễn Mai',       'NURSE', 'd2222222-2222-2222-2222-222222222222', 'yta.mai@medassist.vn', '0944444444'),
-('b0000000-0000-0000-0000-000000000003', 'YTA_TIMMACH',   '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Phan Hồng',        'NURSE', 'd3333333-3333-3333-3333-333333333333', 'yta.hong@medassist.vn', '0966666666'),
-('b0000000-0000-0000-0000-000000000004', 'YTA_TMH',       '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Vũ Thủy',          'NURSE', 'd4444444-4444-4444-4444-444444444444', 'yta.thuy@medassist.vn', '0988888888'),
-('b0000000-0000-0000-0000-000000000005', 'YTA_NHI',       '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Lâm Thảo',         'NURSE', 'd5555555-5555-5555-5555-555555555555', 'yta.thao@medassist.vn', '0910101010'),
-('b0000000-0000-0000-0000-000000000006', 'YTA_THANKINH',  '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Cao An',           'NURSE', 'd6666666-6666-6666-6666-666666666666', 'yta.an@medassist.vn', '0930303030'),
-('b0000000-0000-0000-0000-000000000007', 'YTA_MAT',       '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Lê Thu',           'NURSE', 'd7777777-7777-7777-7777-777777777777', 'yta.thu@medassist.vn', '0950505050'),
-('b0000000-0000-0000-0000-000000000008', 'YTA_HOHAP',     '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Đào Sen',          'NURSE', 'd8888888-8888-8888-8888-888888888888', 'yta.sen@medassist.vn', '0970707070'),
-('b0000000-0000-0000-0000-000000000009', 'YTA_TIEUHOA',   '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Trần Trà',         'NURSE', 'd9999999-9999-9999-9999-999999999999', 'yta.tra@medassist.vn', '0990909090'),
-('b0000000-0000-0000-0000-000000000010', 'YTA_DALIEU',    '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Lý Linh',          'NURSE', 'daaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'yta.linh@medassist.vn', '0912121212'),
-('b0000000-0000-0000-0000-000000000011', 'YTA_XUONGKHOP', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Y tá Ngô Trâm',         'NURSE', 'dbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'yta.tram@medassist.vn', '0934343434');
+('b0000000-0000-0000-0000-000000000001', 'YTA_NGA',       '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Lê Thu Nga',       'NURSE', 'd1111111-1111-1111-1111-111111111111', 'yta.nga@medassist.vn', '0922222222'),
+('b0000000-0000-0000-0000-000000000002', 'YTA_SAN',       '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Nguyễn Mai',       'NURSE', 'd2222222-2222-2222-2222-222222222222', 'yta.mai@medassist.vn', '0944444444'),
+('b0000000-0000-0000-0000-000000000003', 'YTA_TIMMACH',   '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Phan Hồng',        'NURSE', 'd3333333-3333-3333-3333-333333333333', 'yta.hong@medassist.vn', '0966666666'),
+('b0000000-0000-0000-0000-000000000004', 'YTA_TMH',       '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Vũ Thủy',          'NURSE', 'd4444444-4444-4444-4444-444444444444', 'yta.thuy@medassist.vn', '0988888888'),
+('b0000000-0000-0000-0000-000000000005', 'YTA_NHI',       '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Lâm Thảo',         'NURSE', 'd5555555-5555-5555-5555-555555555555', 'yta.thao@medassist.vn', '0910101010'),
+('b0000000-0000-0000-0000-000000000006', 'YTA_THANKINH',  '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Cao An',           'NURSE', 'd6666666-6666-6666-6666-666666666666', 'yta.an@medassist.vn', '0930303030'),
+('b0000000-0000-0000-0000-000000000007', 'YTA_MAT',       '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Lê Thu',           'NURSE', 'd7777777-7777-7777-7777-777777777777', 'yta.thu@medassist.vn', '0950505050'),
+('b0000000-0000-0000-0000-000000000008', 'YTA_HOHAP',     '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Đào Sen',          'NURSE', 'd8888888-8888-8888-8888-888888888888', 'yta.sen@medassist.vn', '0970707070'),
+('b0000000-0000-0000-0000-000000000009', 'YTA_TIEUHOA',   '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Trần Trà',         'NURSE', 'd9999999-9999-9999-9999-999999999999', 'yta.tra@medassist.vn', '0990909090'),
+('b0000000-0000-0000-0000-000000000010', 'YTA_DALIEU',    '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Lý Linh',          'NURSE', 'daaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'yta.linh@medassist.vn', '0912121212'),
+('b0000000-0000-0000-0000-000000000011', 'YTA_XUONGKHOP', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Y tá Ngô Trâm',         'NURSE', 'dbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'yta.tram@medassist.vn', '0934343434');
 
 -- Bác sĩ chuyên khoa khám lâm sàng (Pass: 123456)
 INSERT INTO USERS (id, bhyt_number, password_hash, full_name, role, department_id, email, phone) VALUES
-('b0000000-0000-0000-0000-000000000101', 'BS_MINH',      '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Nguyễn Nhật Minh',  'DOCTOR', 'd1111111-1111-1111-1111-111111111111', 'bs.minh@medassist.vn', '0911111111'),
-('b0000000-0000-0000-0000-000000000102', 'BS_SAN',       '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Trần Thị Hạnh',     'DOCTOR', 'd2222222-2222-2222-2222-222222222222', 'bs.hanh@medassist.vn', '0933333333'),
-('b0000000-0000-0000-0000-000000000103', 'BS_TIMMACH',   '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Lê Trọng Tài',      'DOCTOR', 'd3333333-3333-3333-3333-333333333333', 'bs.tai@medassist.vn', '0955555555'),
-('b0000000-0000-0000-0000-000000000104', 'BS_TMH',       '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Đinh Văn Sang',     'DOCTOR', 'd4444444-4444-4444-4444-444444444444', 'bs.sang@medassist.vn', '0977777777'),
-('b0000000-0000-0000-0000-000000000105', 'BS_NHI',       '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Hoàng Thanh Trúc',  'DOCTOR', 'd5555555-5555-5555-5555-555555555555', 'bs.truc@medassist.vn', '0999999999'),
-('b0000000-0000-0000-0000-000000000106', 'BS_THANKINH',  '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Trịnh Gia Minh',    'DOCTOR', 'd6666666-6666-6666-6666-666666666666', 'bs.giaminh@medassist.vn', '0920202020'),
-('b0000000-0000-0000-0000-000000000107', 'BS_MAT',       '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Nguyễn Quang Nhãn', 'DOCTOR', 'd7777777-7777-7777-7777-777777777777', 'bs.nhan@medassist.vn', '0940404040'),
-('b0000000-0000-0000-0000-000000000108', 'BS_HOHAP',     '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Phạm Tuấn',         'DOCTOR', 'd8888888-8888-8888-8888-888888888888', 'bs.tuan@medassist.vn', '0960606060'),
-('b0000000-0000-0000-0000-000000000109', 'BS_TIEUHOA',   '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Ngô Bích',          'DOCTOR', 'd9999999-9999-9999-9999-999999999999', 'bs.bich@medassist.vn', '0980808080'),
-('b0000000-0000-0000-0000-000000000110', 'BS_DALIEU',    '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Đinh Công',          'DOCTOR', 'daaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bs.cong@medassist.vn', '0901010101'),
-('b0000000-0000-0000-0000-000000000111', 'BS_XUONGKHOP', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'BS. Phan Mạnh',         'DOCTOR', 'dbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'bs.manh@medassist.vn', '0923232323');
+('b0000000-0000-0000-0000-000000000101', 'BS_MINH',      '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Nguyễn Nhật Minh',  'DOCTOR', 'd1111111-1111-1111-1111-111111111111', 'bs.minh@medassist.vn', '0911111111'),
+('b0000000-0000-0000-0000-000000000102', 'BS_SAN',       '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Trần Thị Hạnh',     'DOCTOR', 'd2222222-2222-2222-2222-222222222222', 'bs.hanh@medassist.vn', '0933333333'),
+('b0000000-0000-0000-0000-000000000103', 'BS_TIMMACH',   '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Lê Trọng Tài',      'DOCTOR', 'd3333333-3333-3333-3333-333333333333', 'bs.tai@medassist.vn', '0955555555'),
+('b0000000-0000-0000-0000-000000000104', 'BS_TMH',       '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Đinh Văn Sang',     'DOCTOR', 'd4444444-4444-4444-4444-444444444444', 'bs.sang@medassist.vn', '0977777777'),
+('b0000000-0000-0000-0000-000000000105', 'BS_NHI',       '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Hoàng Thanh Trúc',  'DOCTOR', 'd5555555-5555-5555-5555-555555555555', 'bs.truc@medassist.vn', '0999999999'),
+('b0000000-0000-0000-0000-000000000106', 'BS_THANKINH',  '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Trịnh Gia Minh',    'DOCTOR', 'd6666666-6666-6666-6666-666666666666', 'bs.giaminh@medassist.vn', '0920202020'),
+('b0000000-0000-0000-0000-000000000107', 'BS_MAT',       '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Nguyễn Quang Nhãn', 'DOCTOR', 'd7777777-7777-7777-7777-777777777777', 'bs.nhan@medassist.vn', '0940404040'),
+('b0000000-0000-0000-0000-000000000108', 'BS_HOHAP',     '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Phạm Tuấn',         'DOCTOR', 'd8888888-8888-8888-8888-888888888888', 'bs.tuan@medassist.vn', '0960606060'),
+('b0000000-0000-0000-0000-000000000109', 'BS_TIEUHOA',   '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Ngô Bích',          'DOCTOR', 'd9999999-9999-9999-9999-999999999999', 'bs.bich@medassist.vn', '0980808080'),
+('b0000000-0000-0000-0000-000000000110', 'BS_DALIEU',    '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Đinh Công',          'DOCTOR', 'daaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bs.cong@medassist.vn', '0901010101'),
+('b0000000-0000-0000-0000-000000000111', 'BS_XUONGKHOP', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'BS. Phan Mạnh',         'DOCTOR', 'dbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'bs.manh@medassist.vn', '0923232323');
 
 -- ------------------------------------------------------------------------------
 -- 3. Insert Danh mục Bệnh nhân mẫu kiểm thử (10 đối tượng chuẩn theo QĐ 1666)
---    • Mật khẩu tất cả bệnh nhân: 123456 -> $2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.
+--    • Mật khẩu tất cả bệnh nhân: 123456 -> $2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG
 --    • Đăng nhập bằng CCCD (12 chữ số) hoặc số BHYT (15 ký tự)
 -- ------------------------------------------------------------------------------
 INSERT INTO USERS (id, cccd, bhyt_number, password_hash, full_name, role, dob, gender, phone, email, address, bhyt_object_code, bhyt_object_name, bhyt_discount_rate, bhyt_expiry_date, bhyt_issued_date) VALUES
 -- 1. Bệnh nhân Hộ nghèo (HN: Hưởng 100% KCB, không giới hạn)
-('c0000000-0000-0000-0000-000000000001', '079204000001', 'HN4790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Văn Nghèo', 'PATIENT', '1959-05-15', 'Nam', '0912000001', 'ngheo.nguyen@gmail.com', '123 Đường Hải Phòng, P. Thạch Thang, Q. Hải Châu, Đà Nẵng', 'HN', 'Hộ nghèo', 1.00, '2028-12-31', '2024-01-01'),
+('c0000000-0000-0000-0000-000000000001', '079204000001', 'HN4790000000001', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Nguyễn Văn Nghèo', 'PATIENT', '1959-05-15', 'Nam', '0912000001', 'ngheo.nguyen@gmail.com', '123 Đường Hải Phòng, P. Thạch Thang, Q. Hải Châu, Đà Nẵng', 'HN', 'Hộ nghèo', 1.00, '2028-12-31', '2024-01-01'),
 
 -- 2. Bệnh nhân Cận nghèo (CN: Hưởng 95% KCB)
-('c0000000-0000-0000-0000-000000000002', '079204000002', 'CN3790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Phạm Thị Cận', 'PATIENT', '1990-08-20', 'Nữ', '0912000002', 'can.pham@gmail.com', '45 Lê Duẩn, Q. Hải Châu, Đà Nẵng', 'CN', 'Cận nghèo', 0.95, '2027-12-31', '2024-01-01'),
+('c0000000-0000-0000-0000-000000000002', '079204000002', 'CN3790000000001', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Phạm Thị Cận', 'PATIENT', '1990-08-20', 'Nữ', '0912000002', 'can.pham@gmail.com', '45 Lê Duẩn, Q. Hải Châu, Đà Nẵng', 'CN', 'Cận nghèo', 0.95, '2027-12-31', '2024-01-01'),
 
 -- 3. Trẻ em dưới 6 tuổi (TE: Hưởng 100% KCB)
-('c0000000-0000-0000-0000-000000000003', '079204000003', 'TE1790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Trần Bé Nam', 'PATIENT', '2021-01-10', 'Nam', '0912000003', 'benam.tran@gmail.com', '78 Nguyễn Thị Minh Khai, Đà Nẵng', 'TE', 'Trẻ em dưới 6 tuổi', 1.00, '2028-06-30', '2024-01-01'),
+('c0000000-0000-0000-0000-000000000003', '079204000003', 'TE1790000000001', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Trần Bé Nam', 'PATIENT', '2021-01-10', 'Nam', '0912000003', 'benam.tran@gmail.com', '78 Nguyễn Thị Minh Khai, Đà Nẵng', 'TE', 'Trẻ em dưới 6 tuổi', 1.00, '2028-06-30', '2024-01-01'),
 
 -- 4. Học sinh / Sinh viên (HS: Hưởng 80% KCB)
-('c0000000-0000-0000-0000-000000000004', '079204000004', 'HS4790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Học Sinh', 'PATIENT', '2005-09-05', 'Nam', '0912000004', 'hocsinh@gmail.com', 'Ký túc xá Đại học Kiến Trúc Đà Nẵng', 'HS', 'Học sinh/Sinh viên', 0.80, '2026-08-31', '2024-09-01'),
+('c0000000-0000-0000-0000-000000000004', '079204000004', 'HS4790000000001', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Nguyễn Học Sinh', 'PATIENT', '2005-09-05', 'Nam', '0912000004', 'hocsinh@gmail.com', 'Ký túc xá Đại học Kiến Trúc Đà Nẵng', 'HS', 'Học sinh/Sinh viên', 0.80, '2026-08-31', '2024-09-01'),
 
 -- 5. Người lao động doanh nghiệp (DN: Hưởng 80% KCB)
-('c0000000-0000-0000-0000-000000000005', '079204000005', 'DN4790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Nguyễn Thị Lan', 'PATIENT', '1992-11-25', 'Nữ', '0912000005', 'lan.nguyen@fpt.com', 'Khu Công nghệ cao Đà Nẵng', 'DN', 'Người lao động', 0.80, '2026-12-31', '2024-01-01'),
+('c0000000-0000-0000-0000-000000000005', '079204000005', 'DN4790000000001', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Nguyễn Thị Lan', 'PATIENT', '1992-11-25', 'Nữ', '0912000005', 'lan.nguyen@fpt.com', 'Khu Công nghệ cao Đà Nẵng', 'DN', 'Người lao động', 0.80, '2026-12-31', '2024-01-01'),
 
 -- 6. Cán bộ Hưu trí (HT: Hưởng 95% KCB)
-('c0000000-0000-0000-0000-000000000006', '079204000006', 'HT2790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Bùi Hưu Trí', 'PATIENT', '1955-03-12', 'Nam', '0912000006', 'tri.bui@gmail.com', '12 Quang Trung, Đà Nẵng', 'HT', 'Hưu trí', 0.95, '2028-12-31', '2023-01-01'),
+('c0000000-0000-0000-0000-000000000006', '079204000006', 'HT2790000000001', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Bùi Hưu Trí', 'PATIENT', '1955-03-12', 'Nam', '0912000006', 'tri.bui@gmail.com', '12 Quang Trung, Đà Nẵng', 'HT', 'Hưu trí', 0.95, '2028-12-31', '2023-01-01'),
 
 -- 7. Hộ gia đình tự nguyện (GD: Hưởng 80% KCB)
-('c0000000-0000-0000-0000-000000000007', '079204000007', 'GD4790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Đinh Công Viên', 'PATIENT', '1982-07-19', 'Nam', '0912000007', 'vien.dinh@gmail.com', '34 Điện Biên Phủ, Đà Nẵng', 'GD', 'Hộ gia đình', 0.80, '2026-12-31', '2024-01-01'),
+('c0000000-0000-0000-0000-000000000007', '079204000007', 'GD4790000000001', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Đinh Công Viên', 'PATIENT', '1982-07-19', 'Nam', '0912000007', 'vien.dinh@gmail.com', '34 Điện Biên Phủ, Đà Nẵng', 'GD', 'Hộ gia đình', 0.80, '2026-12-31', '2024-01-01'),
 
 -- 8. Thân nhân sĩ quan công an/quân đội (TN: Hưởng 80% KCB)
-('c0000000-0000-0000-0000-000000000008', '079204000008', 'TN4790000000001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Vũ Thân Nhân', 'PATIENT', '1987-12-01', 'Nữ', '0912000008', 'nhan.vu@gmail.com', '56 Nguyễn Văn Linh, Đà Nẵng', 'TN', 'Thân nhân sĩ quan', 0.80, '2027-12-31', '2024-01-01'),
+('c0000000-0000-0000-0000-000000000008', '079204000008', 'TN4790000000001', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Vũ Thân Nhân', 'PATIENT', '1987-12-01', 'Nữ', '0912000008', 'nhan.vu@gmail.com', '56 Nguyễn Văn Linh, Đà Nẵng', 'TN', 'Thân nhân sĩ quan', 0.80, '2027-12-31', '2024-01-01'),
 
 -- 9. Bệnh nhân có thẻ BHYT HẾT HẠN (để test tính năng cảnh báo thẻ quá hạn)
-('c0000000-0000-0000-0000-000000000009', '079204000009', 'DN4790009900001', '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Test Thẻ Hết Hạn', 'PATIENT', '1988-02-14', 'Nam', '0912000009', 'hethan@gmail.com', '99 Núi Thành, Đà Nẵng', 'DN', 'Người lao động', 0.80, '2023-01-01', '2022-01-01'),
+('c0000000-0000-0000-0000-000000000009', '079204000009', 'DN4790009900001', '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Test Thẻ Hết Hạn', 'PATIENT', '1988-02-14', 'Nam', '0912000009', 'hethan@gmail.com', '99 Núi Thành, Đà Nẵng', 'DN', 'Người lao động', 0.80, '2023-01-01', '2022-01-01'),
 
 -- 10. Bệnh nhân Khám Dịch vụ thuần túy (Không có thẻ BHYT -> Tự chi trả 100%)
-('c0000000-0000-0000-0000-000000000010', '079204000010', NULL,               '$2a$10$N/YI9zT/FToP//E7nBv2QOg.8U2tW4vI4b3/9K9g.w/00l4nFw/H.', 'Hoàng Khám Dịch Vụ', 'PATIENT', '1995-10-30', 'Nam', '0912000010', 'dichvu@gmail.com', '88 Bạch Đằng, Đà Nẵng', NULL, 'Khám Dịch Vụ', 0.00, NULL, NULL);
+('c0000000-0000-0000-0000-000000000010', '079204000010', NULL,               '$2a$10$dogvUePriTYmW0hIPyvLmuMz6shIsen5vDKa38V9MrT6lDNNEONeG', 'Hoàng Khám Dịch Vụ', 'PATIENT', '1995-10-30', 'Nam', '0912000010', 'dichvu@gmail.com', '88 Bạch Đằng, Đà Nẵng', NULL, 'Khám Dịch Vụ', 0.00, NULL, NULL);
 
 -- ------------------------------------------------------------------------------
 -- 4. Insert Danh mục Dịch vụ Kỹ thuật & Cận lâm sàng (Có giá BHYT theo Thông tư)
