@@ -66,7 +66,7 @@ public class ChatService {
     private String geminiApiKey;
 
     /** Google Gemini Cloud Model */
-    @Value("${ai.gemini.model:gemini-1.5-flash}")
+    @Value("${ai.gemini.model:gemini-3.1-flash-lite}")
     private String geminiModel;
 
     /** Google Gemini Cloud Endpoint URL */
@@ -358,7 +358,7 @@ public class ChatService {
             ));
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-            String targetModel = (geminiModel != null && !geminiModel.isBlank()) ? geminiModel : "gemini-1.5-flash";
+            String targetModel = (geminiModel != null && !geminiModel.isBlank()) ? geminiModel : "gemini-3.1-flash-lite";
             String url = geminiUrl.replaceAll("/+$", "") + "/" + targetModel + ":generateContent?key=" + geminiApiKey.trim();
 
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
@@ -707,7 +707,7 @@ public class ChatService {
     public Map<String, Object> getAiGatewayStatus() {
         Map<String, Object> status = new HashMap<>();
         status.put("provider", aiProvider != null ? aiProvider.toUpperCase() : "HYBRID");
-        status.put("geminiModel", geminiModel != null ? geminiModel : "gemini-1.5-flash");
+        status.put("geminiModel", geminiModel != null ? geminiModel : "gemini-3.1-flash-lite");
         status.put("hasGeminiKey", geminiApiKey != null && !geminiApiKey.isBlank());
         status.put("ollamaModel", aiModelName != null ? aiModelName : "qwen2.5-coder:3b");
         status.put("ollamaUrl", aiServiceUrl != null ? aiServiceUrl : "http://localhost:11434");
