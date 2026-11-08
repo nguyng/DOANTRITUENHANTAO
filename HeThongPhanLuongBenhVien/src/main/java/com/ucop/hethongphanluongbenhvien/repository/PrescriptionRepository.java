@@ -1,6 +1,7 @@
 package com.ucop.hethongphanluongbenhvien.repository;
 
 import com.ucop.hethongphanluongbenhvien.entity.Prescription;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -9,5 +10,6 @@ import java.util.UUID;
 
 @Repository
 public interface PrescriptionRepository extends JpaRepository<Prescription, UUID> {
+    @EntityGraph(attributePaths = {"medicine"})
     List<Prescription> findByVisitRecordId(UUID visitRecordId);
 }

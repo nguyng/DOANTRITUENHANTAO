@@ -36,8 +36,8 @@
                         <div>
                             <p class="text-sm font-bold text-primary" th:text="${#numbers.formatDecimal(visit.finalCost, 0, 'COMMA', 0, 'POINT')} + 'đ'">150,000đ</p>
                             <span class="text-xs px-2 py-0.5 rounded-full"
-                                  th:classappend="${visit.status == 'COMPLETED'} ? 'status-done' : 'status-waiting'"
-                                  th:text="${visit.status == 'COMPLETED'} ? 'Hoàn tất' : 'Đang khám'">Hoàn tất</span>
+                                  th:classappend="${visit.status != null and visit.status.name() == 'COMPLETED'} ? 'status-done' : 'status-waiting'"
+                                  th:text="${visit.status != null and visit.status.name() == 'COMPLETED'} ? 'Hoàn tất' : 'Đang khám'">Hoàn tất</span>
                         </div>
                         <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i>
                     </div>
