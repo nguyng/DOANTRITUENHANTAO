@@ -7,6 +7,31 @@
 
     <!-- Main content (offset by sidebar width) -->
     <main class="ml-64 p-8">
+        <!-- Toast Alerts -->
+        <div th:if="${error}" class="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-between shadow-sm animate-fade-in">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                    <i data-lucide="shield-alert" class="w-5 h-5 text-rose-600"></i>
+                </div>
+                <p class="text-sm font-semibold" th:text="${error}">Lỗi thông báo</p>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-rose-400 hover:text-rose-600 p-1">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <div th:if="${success}" class="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-between shadow-sm animate-fade-in">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                    <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+                </div>
+                <p class="text-sm font-semibold" th:text="${success}">Thành công</p>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-emerald-400 hover:text-emerald-600 p-1">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
         <!-- Header -->
         <div class="flex items-center justify-between mb-8">
             <div>

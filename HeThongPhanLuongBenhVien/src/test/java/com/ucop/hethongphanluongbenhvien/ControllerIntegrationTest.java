@@ -23,9 +23,10 @@ import org.springframework.web.context.WebApplicationContext;
 
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
@@ -155,17 +156,59 @@ public class ControllerIntegrationTest {
 
 
     @Test
-
     @WithMockUser(username = "YTA_NGA", roles = {"NURSE"})
-
-    @DisplayName("Kiểm tra Nurse Queue /nurse/queue")
-
+    @DisplayName("Kiểm tra Nurse Queue /nurse/queue tự động redirect về khoa phụ trách")
     void testNurseQueue() throws Exception {
-
         mockMvc.perform(get("/nurse/queue"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/nurse/queue/d1111111-1111-1111-1111-111111111111"));
+    }
 
+    @Test
+    @WithMockUser(username = "ADMIN_001", roles = {"ADMIN"})
+    @DisplayName("Kiểm tra Admin vào Nurse Queue /nurse/queue xem toàn viện 200 OK")
+    void testAdminNurseQueue() throws Exception {
+        mockMvc.perform(get("/nurse/queue"))
                 .andExpect(status().isOk());
+    }
 
+    @Test
+    @WithMockUser(username = "YTA_NGA", roles = {"NURSE"})
+    @DisplayName("Cô lập dữ liệu: Y tá Cấp cứu truy cập Khoa Tim Mạch bị chặn và redirect về khoa mình")
+    void testDepartmentIsolationBlocked() throws Exception {
+        mockMvc.perform(get("/nurse/queue/d3333333-3333-3333-3333-333333333333"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/nurse/queue/d1111111-1111-1111-1111-111111111111"))
+                .andExpect(flash().attributeExists("error"));
+    }
+
+    @Test
+    @WithMockUser(username = "BS_TIMMACH", roles = {"DOCTOR"})
+    @DisplayName("Bác sĩ Tim Mạch vào khoa Tim Mạch của mình 200 OK")
+    void testDoctorInOwnDepartment() throws Exception {
+        mockMvc.perform(get("/nurse/queue/d3333333-3333-3333-3333-333333333333"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("department"))
+                .andExpect(model().attributeExists("todayShifts"));
+    }
+
+    @Test
+    @WithMockUser(username = "BS_TIMMACH", roles = {"DOCTOR"})
+    @DisplayName("Kiểm tra trang Lịch trực & Ca làm /nurse/schedule")
+    void testNurseSchedule() throws Exception {
+        mockMvc.perform(get("/nurse/schedule"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("weeklySchedule"))
+                .andExpect(model().attributeExists("mySchedules"));
+    }
+
+    @Test
+    @WithMockUser(username = "YTA_NGA", roles = {"NURSE"})
+    @DisplayName("Kiểm tra tra cứu bệnh nhân /nurse/search có kết quả")
+    void testNurseSearch() throws Exception {
+        mockMvc.perform(get("/nurse/search").param("q", "079204000001"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("patient"));
     }
 
 
