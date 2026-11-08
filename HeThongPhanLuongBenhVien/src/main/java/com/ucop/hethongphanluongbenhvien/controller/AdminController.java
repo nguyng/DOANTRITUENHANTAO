@@ -8,6 +8,7 @@ import com.ucop.hethongphanluongbenhvien.repository.FaqRepository;
 import com.ucop.hethongphanluongbenhvien.repository.UserRepository;
 import com.ucop.hethongphanluongbenhvien.repository.VisitRecordRepository;
 import com.ucop.hethongphanluongbenhvien.repository.AiAnalysisLogRepository;
+import com.ucop.hethongphanluongbenhvien.service.ChatService;
 import com.ucop.hethongphanluongbenhvien.service.AdminService;
 import com.ucop.hethongphanluongbenhvien.service.DepartmentService;
 import com.ucop.hethongphanluongbenhvien.service.TicketService;
@@ -34,6 +35,7 @@ public class AdminController {
     private final FaqRepository     faqRepository;
     private final VisitRecordRepository visitRecordRepository;
     private final AiAnalysisLogRepository aiAnalysisLogRepository;
+    private final ChatService           chatService;
 
     // ── Helper ───────────────────────────────────────────────────────────────────
 
@@ -191,6 +193,23 @@ public class AdminController {
         model.addAttribute("currentPage", "logs");
         addAdminAttrs(model, ud);
         model.addAttribute("logs", aiAnalysisLogRepository.findAllByOrderByCreatedAtDesc());
+        model.addAttribute("aiGateway", chatService.getAiGatewayStatus());
         return "admin/logs";
+    }
+
+    @PostMapping("/ai-config")
+    public String updateAiConfig(@RequestParam String provider,
+                                 @RequestParam(required = false) String geminiApiKey,
+                                 @RequestParam(required = false) String geminiModel,
+                                 RedirectAttributes ra) {
+        chatService.setAiProvider(provider);
+        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
+            chatService.setGeminiApiKey(geminiApiKey.trim());
+        }
+        if (geminiModel != null && !geminiModel.isBlank()) {
+            chatService.setGeminiModel(geminiModel.trim());
+        }
+        ra.addFlashAttribute("success", "Cập nhật cấu hình Hybrid AI Gateway thành công!");
+        return "redirect:/admin/logs";
     }
 }

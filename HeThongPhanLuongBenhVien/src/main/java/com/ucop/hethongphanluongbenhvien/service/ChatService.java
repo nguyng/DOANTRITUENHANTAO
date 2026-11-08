@@ -57,6 +57,22 @@ public class ChatService {
     @Value("${ai.model.name:qwen2.5-coder:3b}")
     private String aiModelName;
 
+    /** Che do hoat dong cua AI Gateway: hybrid, gemini, ollama */
+    @Value("${ai.provider:hybrid}")
+    private String aiProvider;
+
+    /** Google Gemini Cloud API Key */
+    @Value("${ai.gemini.api-key:}")
+    private String geminiApiKey;
+
+    /** Google Gemini Cloud Model */
+    @Value("${ai.gemini.model:gemini-1.5-flash}")
+    private String geminiModel;
+
+    /** Google Gemini Cloud Endpoint URL */
+    @Value("${ai.gemini.url:https://generativelanguage.googleapis.com/v1beta/models}")
+    private String geminiUrl;
+
     // ======================== Session ========================
 
     @Transactional
@@ -151,7 +167,7 @@ public class ChatService {
                 try {
                     AiAnalysisLog logEntity = AiAnalysisLog.builder()
                             .message(botMsg)
-                            .aiModelUsed(aiModelName)
+                            .aiModelUsed(aiResult.modelUsed() != null ? aiResult.modelUsed() : aiModelName)
                             .inputText(userText)
                             .predictedDept(dept.getName() + " (" + dept.getCode() + ")")
                             .confidenceScore(BigDecimal.valueOf(confidence).divide(BigDecimal.valueOf(100)))
@@ -297,28 +313,93 @@ public class ChatService {
             }
             """;
 
-    private AiResponse callAiService(String userText, String sessionId, List<Map<String, String>> history) {
+    private AiResponse callGemini(String selectedSystemPrompt, String userText, List<Map<String, String>> history) {
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            return null;
+        }
+
         try {
-            // 1. Kiem tra co do Cap cuu nguy kich (Red Flag)
-            if (isEmergencyRedFlag(userText)) {
-                return emergencyResponse(userText);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            List<Map<String, Object>> contents = new ArrayList<>();
+            int startIdx = Math.max(0, history.size() - 6);
+            String lastRole = null;
+            for (int i = startIdx; i < history.size(); i++) {
+                Map<String, String> h = history.get(i);
+                String rawRole = h.get("role");
+                String gRole = "assistant".equalsIgnoreCase(rawRole) ? "model" : "user";
+                if (!gRole.equals(lastRole)) {
+                    contents.add(Map.of("role", gRole, "parts", List.of(Map.of("text", h.get("content")))));
+                    lastRole = gRole;
+                }
+            }
+            if (!"user".equals(lastRole)) {
+                contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", userText))));
+            } else {
+                if (!contents.isEmpty()) {
+                    contents.set(contents.size() - 1, Map.of(
+                            "role", "user",
+                            "parts", List.of(Map.of("text", userText))
+                    ));
+                } else {
+                    contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", userText))));
+                }
             }
 
-            // 2. Kiem tra cau hoi ngoai chu de y te -> tra ve tu choi lich su, khong goi Ollama
-            if (isOffTopic(userText.toLowerCase())) {
-                return new AiResponse(
-                        "Xin lỗi, tôi chỉ có thể hỗ trợ các vấn đề liên quan đến sức khỏe và y tế. " +
-                        "Tôi không thể tư vấn về chủ đề bạn vừa hỏi. " +
-                        "Bạn có đang gặp bất kỳ triệu chứng sức khỏe nào cần được hỗ trợ không?",
-                        false, null);
+            Map<String, Object> body = new HashMap<>();
+            body.put("system_instruction", Map.of(
+                    "parts", List.of(Map.of("text", selectedSystemPrompt))
+            ));
+            body.put("contents", contents);
+            body.put("generationConfig", Map.of(
+                    "response_mime_type", "application/json",
+                    "temperature", 0.1
+            ));
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            String targetModel = (geminiModel != null && !geminiModel.isBlank()) ? geminiModel : "gemini-1.5-flash";
+            String url = geminiUrl.replaceAll("/+$", "") + "/" + targetModel + ":generateContent?key=" + geminiApiKey.trim();
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> data = (Map<String, Object>) response.getBody();
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> candidates = (List<Map<String, Object>>) data.get("candidates");
+                if (candidates != null && !candidates.isEmpty()) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+                    if (content != null) {
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+                        if (parts != null && !parts.isEmpty()) {
+                            String rawText = String.valueOf(parts.get(0).get("text")).trim();
+                            if (rawText.startsWith("```")) {
+                                rawText = rawText.replaceAll("^```[a-zA-Z]*\\s*", "").replaceAll("\\s*```$", "").trim();
+                            }
+                            Map<String, Object> parsed = objectMapper.readValue(
+                                    rawText, new TypeReference<Map<String, Object>>() {});
+
+                            String reply = String.valueOf(parsed.getOrDefault(
+                                    "reply", "Tôi đã ghi nhận thông tin triệu chứng của bạn."));
+                            boolean hasTriage = Boolean.TRUE.equals(parsed.get("has_triage_result"));
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> triageRaw = (Map<String, Object>) parsed.get("triage");
+
+                            return new AiResponse(reply, hasTriage, triageRaw, "Gemini " + targetModel + " (Cloud)");
+                        }
+                    }
+                }
             }
+        } catch (Exception e) {
+            log.warn("[Hybrid AI Gateway] Lỗi khi gọi Google Gemini Cloud API: {}", e.getMessage());
+        }
+        return null;
+    }
 
-            // 3. Xac dinh giai doan hoi thoai:
-            // - Neu history.size() < 2 (moi la luot dau tien) va mo ta chua qua day du -> Giai doan 1 (Khai thac trieu chung mau chot)
-            // - Neu history.size() >= 2 (benh nhan da tra loi cau hoi lam ro) hoac da mo ta rat chi tiet (> 120 ky tu) -> Giai doan 2 (Tong hop va chot khoa)
-            boolean isInitialBrief = history.size() < 2 && !isVeryDetailed(userText);
-            String selectedSystemPrompt = isInitialBrief ? SYSTEM_PROMPT_PROBE : SYSTEM_PROMPT_DECISION;
-
+    private AiResponse callOllama(String selectedSystemPrompt, String userText, List<Map<String, String>> history) {
+        try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -354,8 +435,10 @@ public class ChatService {
                 Map<String, Object> msg = (Map<String, Object>) data.get("message");
                 if (msg != null && msg.containsKey("content")) {
                     String contentStr = String.valueOf(msg.get("content")).trim();
+                    if (contentStr.startsWith("```")) {
+                        contentStr = contentStr.replaceAll("^```[a-zA-Z]*\\s*", "").replaceAll("\\s*```$", "").trim();
+                    }
 
-                    // Parse JSON tra ve tu LLM
                     Map<String, Object> parsed = objectMapper.readValue(
                             contentStr, new TypeReference<Map<String, Object>>() {});
 
@@ -366,15 +449,61 @@ public class ChatService {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> triageRaw = (Map<String, Object>) parsed.get("triage");
 
-                    return new AiResponse(reply, hasTriage, triageRaw);
+                    return new AiResponse(reply, hasTriage, triageRaw, "Ollama " + aiModelName + " (Local Edge)");
                 }
             }
         } catch (Exception e) {
-            log.error("Lỗi khi kết nối Local AI Ollama ({}) tại {}: {}", aiModelName, aiServiceUrl, e.getMessage());
+            log.warn("[Hybrid AI Gateway] Local Ollama ({}) không phản hồi: {}", aiModelName, e.getMessage());
+        }
+        return null;
+    }
+
+    private AiResponse callAiService(String userText, String sessionId, List<Map<String, String>> history) {
+        // 1. Kiem tra co do Cap cuu nguy kich (Red Flag)
+        if (isEmergencyRedFlag(userText)) {
+            return emergencyResponse(userText);
         }
 
-        // Fallback an toan khi Ollama offline
-        return fallbackResponse(userText, history);
+        // 2. Kiem tra cau hoi ngoai chu de y te -> tra ve tu choi lich su, khong goi model
+        if (isOffTopic(userText.toLowerCase())) {
+            return new AiResponse(
+                    "Xin lỗi, tôi chỉ có thể hỗ trợ các vấn đề liên quan đến sức khỏe và y tế. " +
+                    "Tôi không thể tư vấn về chủ đề bạn vừa hỏi. " +
+                    "Bạn có đang gặp bất kỳ triệu chứng sức khỏe nào cần được hỗ trợ không?",
+                    false, null, "Off-Topic Safety Guard");
+        }
+
+        // 3. Xac dinh giai doan hoi thoai:
+        boolean isInitialBrief = history.size() < 2 && !isVeryDetailed(userText);
+        String selectedSystemPrompt = isInitialBrief ? SYSTEM_PROMPT_PROBE : SYSTEM_PROMPT_DECISION;
+
+        AiResponse aiResult = null;
+        boolean enableGemini = "gemini".equalsIgnoreCase(aiProvider) || "hybrid".equalsIgnoreCase(aiProvider);
+        boolean enableOllama = "ollama".equalsIgnoreCase(aiProvider) || "hybrid".equalsIgnoreCase(aiProvider);
+
+        // 4. Ưu tiên 1: Google Gemini Cloud (nếu bật và có API key)
+        if (enableGemini && geminiApiKey != null && !geminiApiKey.isBlank()) {
+            aiResult = callGemini(selectedSystemPrompt, userText, history);
+            if (aiResult != null) {
+                log.info("[Hybrid AI Gateway] Đã xử lý qua Cloud Gemini ({})", geminiModel);
+            }
+        }
+
+        // 5. Ưu tiên 2: Ollama Local Edge (nếu Gemini không khả dụng hoặc cấu hình Ollama)
+        if (aiResult == null && enableOllama) {
+            aiResult = callOllama(selectedSystemPrompt, userText, history);
+            if (aiResult != null) {
+                log.info("[Hybrid AI Gateway] Đã xử lý qua Local Ollama ({})", aiModelName);
+            }
+        }
+
+        // 6. Ưu tiên 3: Clinical Rule-based Fallback khi mất cả mạng lẫn Ollama
+        if (aiResult == null) {
+            log.info("[Hybrid AI Gateway] Kích hoạt Clinical Rule Engine (Safety Fallback)");
+            aiResult = fallbackResponse(userText, history);
+        }
+
+        return aiResult;
     }
 
     private boolean isEmergencyRedFlag(String text) {
@@ -403,7 +532,7 @@ public class ChatService {
         triage.put("summary", "CẢNH BÁO NGUY CẤP: " + userText);
         triage.put("advice", "Di chuyển ngay lập tức vào Khoa Cấp Cứu tại cổng chính Bệnh viện.");
 
-        return new AiResponse("CẢNH BÁO: Tình trạng của bạn có dấu hiệu nguy kịch cần được bác sĩ xử trí ngay lập tức! Vui lòng vào thẳng Khoa Cấp Cứu hoặc nhờ người nhà hỗ trợ gấp.", true, triage);
+        return new AiResponse("CẢNH BÁO: Tình trạng của bạn có dấu hiệu nguy kịch cần được bác sĩ xử trí ngay lập tức! Vui lòng vào thẳng Khoa Cấp Cứu hoặc nhờ người nhà hỗ trợ gấp.", true, triage, "Clinical Safety Rule (M1 Red-Flag)");
     }
 
     /**
@@ -539,7 +668,51 @@ public class ChatService {
 
     // ======================== DTO noi bo ========================
 
-    record AiResponse(String reply, boolean hasTriageResult, Map<String, Object> triageRaw) {}
+    public record AiResponse(String reply, boolean hasTriageResult, Map<String, Object> triageRaw, String modelUsed) {
+        public AiResponse(String reply, boolean hasTriageResult, Map<String, Object> triageRaw) {
+            this(reply, hasTriageResult, triageRaw, "Clinical Rule Engine");
+        }
+    }
+
+    // ── AI Gateway Configuration Getters & Setters ──
+
+    public String getAiProvider() {
+        return aiProvider;
+    }
+
+    public void setAiProvider(String aiProvider) {
+        this.aiProvider = aiProvider;
+    }
+
+    public String getGeminiApiKey() {
+        return geminiApiKey;
+    }
+
+    public void setGeminiApiKey(String geminiApiKey) {
+        this.geminiApiKey = geminiApiKey;
+    }
+
+    public String getGeminiModel() {
+        return geminiModel;
+    }
+
+    public void setGeminiModel(String geminiModel) {
+        this.geminiModel = geminiModel;
+    }
+
+    public String getAiModelName() {
+        return aiModelName;
+    }
+
+    public Map<String, Object> getAiGatewayStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("provider", aiProvider != null ? aiProvider.toUpperCase() : "HYBRID");
+        status.put("geminiModel", geminiModel != null ? geminiModel : "gemini-1.5-flash");
+        status.put("hasGeminiKey", geminiApiKey != null && !geminiApiKey.isBlank());
+        status.put("ollamaModel", aiModelName != null ? aiModelName : "qwen2.5-coder:3b");
+        status.put("ollamaUrl", aiServiceUrl != null ? aiServiceUrl : "http://localhost:11434");
+        return status;
+    }
 
     public record ChatSendResult(ChatMessage message, TriageResult triage) {}
 
